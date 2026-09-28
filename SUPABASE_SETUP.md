@@ -6,11 +6,11 @@ The site is still hosted as a static Cloudflare Pages app. Supabase Free supplie
 
 1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard) on the Free plan. Keep the database password in a password manager; the app does not use it.
 2. In **SQL Editor**, run all contents of `supabase-setup.sql`.
-3. In **Authentication → Providers → Email**, leave email/password sign-in and email confirmation enabled. After creating an account, confirm it through the email Supabase sends before signing in.
-4. In **Authentication → URL Configuration**, set the Site URL to `https://little-by-little-journal.pages.dev`. Add that URL to the allowed redirect URLs.
+3. In **Authentication → Providers → Google**, enable Google sign-in and enter the Google OAuth Web client ID and client secret. Create them in [Google Auth Platform](https://console.cloud.google.com/auth/clients). Add `https://little-by-little-journal.pages.dev` as an authorized JavaScript origin. Add `https://ejordmthcedivrjcznmo.supabase.co/auth/v1/callback` as an authorized redirect URI. Keep the client secret in Supabase only; never add it to this repository.
+4. In **Authentication → URL Configuration**, set the Site URL to `https://little-by-little-journal.pages.dev`. Add `https://little-by-little-journal.pages.dev` to the allowed redirect URLs. For local development, also add `http://localhost:4173`.
 5. In **Project Settings → API**, copy the Project URL and the `publishable` key (or legacy `anon` key). These keys are intended to be public in a browser app; database row-level security and storage policies protect user data.
 6. Paste the URL and public key into `supabase-config.js`, replacing the placeholders. Save and deploy the changed files to Cloudflare Pages.
-7. Open the deployed app, choose **Connect**, then create an account. If the current browser already contains your journal, that device’s pages and images are copied to your account the first time it signs in. Other browsers can sign into the same account to load that journal.
+7. Open the deployed app, choose **Connect**, then choose **Continue with Google**. If the current browser already contains your journal, that device’s pages and images are copied to your account the first time it signs in. Other browsers can sign into the same Google account to load that journal. Email/password sign-in remains available as a fallback.
 
 ## Limits and behavior
 

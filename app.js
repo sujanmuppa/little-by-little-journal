@@ -111,6 +111,7 @@ async function loadCloudState(user) {
   cloudUser = user;
   $('#cloud-account-button').textContent = user ? user.email : 'Connect';
   $('#auth-signout').classList.toggle('hidden', !user);
+  $('#google-signin').classList.toggle('hidden', !!user);
   $('#auth-mode-toggle').classList.toggle('hidden', !!user);
   $('.auth-password-field').classList.toggle('hidden', !!user);
   $('#auth-submit').classList.toggle('hidden', !!user);
@@ -293,10 +294,25 @@ $('#auth-mode-toggle').addEventListener('click', () => {
   $('#auth-mode-toggle').textContent = authMode === 'signup' ? 'I already have an account' : 'Create account';
   $('#auth-message').textContent = '';
 });
+$('#google-signin').addEventListener('click', async () => {
+  if (!cloudClient) { $('#auth-message').textContent = 'Cloud sync is not configured for this site yet.'; return; }
+  const button = $('#google-signin');
+  button.disabled = true;
+  $('#auth-message').textContent = 'Opening Google sign-in…';
+  try {
+    const { error } = await cloudClient.auth.signInWithOAuth({ provider: 'google' });
+    if (error) throw error;
+    $('#auth-message').textContent = 'Redirecting to Google…';
+  } catch (error) {
+    $('#auth-message').textContent = error.message || 'Google sign-in could not be started.';
+    button.disabled = false;
+  }
+});
 $('#auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!cloudClient) { $('#auth-message').textContent = 'Add your Supabase project URL and publishable key to supabase-config.js first.'; return; }
   const form = event.currentTarget, email = form.elements.email.value.trim(), password = form.elements.password.value, submit = $('#auth-submit');
+  if (!email || !password) { $('#auth-message').textContent = 'Enter your email and password to continue.'; return; }
   submit.disabled = true; $('#auth-message').textContent = authMode === 'signup' ? 'Creating your private account…' : 'Signing in…';
   try {
     const result = authMode === 'signup' ? await cloudClient.auth.signUp({ email, password }) : await cloudClient.auth.signInWithPassword({ email, password });

@@ -25,7 +25,7 @@ Then visit `http://localhost:4173`.
 
 Use the backup button to export journals, pages, and images together as a JSON file. Restore that file in another browser to transfer your library. Keep a backup somewhere safe.
 
-For cloud sync, create a Supabase Free project and follow [SUPABASE_SETUP.md](./SUPABASE_SETUP.md). The setup creates private tables and storage policies; users sign in with email and password. Existing device data is uploaded the first time an account connects if that account has no cloud journal yet.
+For cloud sync, create a Supabase Free project and follow [SUPABASE_SETUP.md](./SUPABASE_SETUP.md). The setup creates private tables and storage policies; users can sign in with Google or email and password. Existing device data is uploaded the first time an account connects if that account has no cloud journal yet.
 
 ## Free deployment
 

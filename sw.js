@@ -1,4 +1,4 @@
-const CACHE_NAME = 'little-by-little-shell-v5';
+const CACHE_NAME = 'little-by-little-shell-v6';
 const KATEX_FONTS = ['KaTeX_AMS-Regular', 'KaTeX_Caligraphic-Bold', 'KaTeX_Caligraphic-Regular', 'KaTeX_Fraktur-Bold', 'KaTeX_Fraktur-Regular', 'KaTeX_Main-Bold', 'KaTeX_Main-BoldItalic', 'KaTeX_Main-Italic', 'KaTeX_Main-Regular', 'KaTeX_Math-BoldItalic', 'KaTeX_Math-Italic', 'KaTeX_SansSerif-Bold', 'KaTeX_SansSerif-Italic', 'KaTeX_SansSerif-Regular', 'KaTeX_Script-Regular', 'KaTeX_Size1-Regular', 'KaTeX_Size2-Regular', 'KaTeX_Size3-Regular', 'KaTeX_Size4-Regular', 'KaTeX_Typewriter-Regular'];
 const APP_FILES = ['./', './index.html', './styles.css', './art-direction.css', './app.js', './supabase-config.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './vendor/katex/katex.min.css', './vendor/katex/katex.min.js', './vendor/katex/contrib/auto-render.min.js', ...KATEX_FONTS.map((font) => `./vendor/katex/fonts/${font}.woff2`)];
 
