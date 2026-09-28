@@ -64,6 +64,9 @@ h1{font:500 clamp(67px,8.2vw,104px)/.87 var(--sans);letter-spacing:-.095em;color
 .journal-item{display:grid;grid-template-columns:minmax(0,1fr) 27px 24px;align-items:center;gap:2px}
 .journal-item .journal-option{min-width:0}
 .journal-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cloud-account-button{border:1px solid #41434f;background:transparent;color:#e1e1dc;padding:7px 9px;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:8px var(--mono);cursor:pointer}.cloud-account-button:hover{border-color:var(--accent);color:var(--accent)}.auth-dialog form{padding:30px 34px}.auth-dialog .field{margin:16px 0}.auth-dialog .dialog-actions{justify-content:space-between}.auth-dialog .auth-signout{margin-top:20px}.auth-message{display:block;min-height:18px;margin-top:13px;color:var(--accent);font:8px/1.6 var(--mono)}
+.auth-dialog .dialog-intro{color:#a3a5ae;font-size:10px;line-height:1.8;margin:0 0 22px}
+@media(max-width:540px){.cloud-account-button{max-width:82px;padding:6px;font-size:7px}.auth-dialog form{padding:23px 19px}}
 .journal-action{width:25px;height:27px;border:0;background:transparent;color:#999ca6;font:12px var(--sans);cursor:pointer}
 .journal-action:hover{color:var(--accent)}
 .delete-journal-action:hover{color:#ff806a}

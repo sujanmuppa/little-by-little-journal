@@ -31,6 +31,7 @@
           <div class="journal-menu hidden" id="journal-menu"><span class="journal-menu-label">YOUR JOURNALS</span><div id="journal-list"></div><button class="new-journal-button" id="new-journal-button" type="button"><span>＋</span> New journal</button></div>
         </div>
         <span class="today-label"><span class="live-dot"></span><span id="today"></span></span>
+        <button class="cloud-account-button" id="cloud-account-button" type="button">Connect</button>
         <button class="icon-button" id="backup-button" type="button" title="Back up or restore journal" aria-label="Back up or restore journal">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/></svg>
         </button>
@@ -140,14 +141,17 @@
         <section class="field full image-field"><span>IMAGES & DIAGRAMS <i>optional</i></span><label class="image-drop" for="page-images"><span class="image-plus">＋</span><span>Add a photo, sketch, or diagram</span><input id="page-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden /></label><div class="image-preview-list" id="image-preview-list"></div><small class="image-help">Images are resized for your journal and stay on this device.</small></section>
       </div>
       <div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button save-button" id="save-page-button" type="submit">Save this page <span>↗</span></button></div>
-      <p class="privacy-note"><span>⌑</span> Your pages stay in this browser. Export a backup to keep them safe.</p>
+      <p class="privacy-note"><span>⌑</span> Your pages sync to your private account when connected.</p>
     </form>
   </dialog>
 
   <dialog id="detail-dialog" class="detail-dialog"><div id="detail-content"></div></dialog>
   <dialog id="journal-dialog" class="journal-create-dialog"><form id="journal-form"><div class="dialog-top"><span class="dialog-kicker" id="journal-dialog-kicker">A NEW SUBJECT NOTEBOOK</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2 id="journal-dialog-title">Make a little<br /><em>more room.</em></h2><p class="dialog-intro" id="journal-dialog-intro">Group related ideas into one subject journal.</p><input type="hidden" name="id" /><label class="field"><span>JOURNAL / SUBJECT NAME</span><input name="name" maxlength="40" required placeholder="e.g. Data structures & algorithms" /></label><div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button" id="journal-submit-label" type="submit">Create journal <span>↗</span></button></div></form></dialog>
-  <dialog id="backup-dialog" class="backup-dialog"><div class="dialog-top"><span class="dialog-kicker">YOUR JOURNAL, YOURS</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2>Keep a copy<br /><em>somewhere safe.</em></h2><p>Your entries live on this device. Export a JSON backup to move them or keep a copy. You can also restore a backup here.</p><div class="backup-actions"><button id="export-button" class="primary-button" type="button">Download backup <span>↓</span></button><label class="import-button">Restore from backup <input id="import-file" type="file" accept="application/json,.json" hidden /></label></div><small id="backup-message"></small></dialog>
+  <dialog id="auth-dialog" class="backup-dialog auth-dialog"><form id="auth-form"><div class="dialog-top"><span class="dialog-kicker">YOUR JOURNAL, ACROSS DEVICES</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2 id="auth-title">Keep your ideas<br /><em>in step.</em></h2><p id="auth-copy">Sign in or create an account to sync your pages and illustrations privately.</p><label class="field"><span>EMAIL ADDRESS</span><input name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></label><label class="field auth-password-field"><span>PASSWORD</span><input name="password" type="password" minlength="6" autocomplete="current-password" required placeholder="At least 6 characters" /></label><div class="dialog-actions auth-actions"><button class="cancel-button" id="auth-mode-toggle" type="button">Create account</button><button class="primary-button" id="auth-submit" type="submit">Sign in <span>↗</span></button></div><button class="text-button auth-signout hidden" id="auth-signout" type="button">Sign out</button><small id="auth-message" class="auth-message"></small></form></dialog>
+  <dialog id="backup-dialog" class="backup-dialog"><div class="dialog-top"><span class="dialog-kicker">YOUR JOURNAL, YOURS</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2>Keep a copy<br /><em>somewhere safe.</em></h2><p>Export a JSON backup to keep a copy or move your journal. Restoring replaces your current library.</p><div class="backup-actions"><button id="export-button" class="primary-button" type="button">Download backup <span>↓</span></button><label class="import-button">Restore from backup <input id="import-file" type="file" accept="application/json,.json" hidden /></label></div><small id="backup-message"></small></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="supabase-config.js"></script>
   <script defer src="app.js"></script>
 </body>
 </html>

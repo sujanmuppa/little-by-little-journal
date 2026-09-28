@@ -15,11 +15,14 @@ const seedEntries = [
 let entries = [];
 let journals = [{ id: DEFAULT_JOURNAL_ID, name: 'Practice log', createdAt: new Date().toISOString() }];
 let activeJournalId = DEFAULT_JOURNAL_ID;
+let localStateUpdatedAt = 0;
+let activeStorageKey = STORAGE_KEY, hasAccountCache = false;
 try {
   let saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) for (const key of OLD_KEYS) { saved = localStorage.getItem(key); if (saved) break; }
   if (saved) {
     const state = JSON.parse(saved);
+    localStateUpdatedAt = Date.parse(state.updatedAt) || 0;
     entries = Array.isArray(state) ? state : Array.isArray(state.entries) ? state.entries : [];
     if (!Array.isArray(state) && Array.isArray(state.journals) && state.journals.length) journals = state.journals;
     if (!Array.isArray(state) && journals.some((j) => j.id === state.activeJournalId)) activeJournalId = state.activeJournalId;
@@ -31,6 +34,8 @@ if (!journals.some((j) => j.id === activeJournalId)) activeJournalId = journals[
 let activeFilter = 'all', selectedEntryId = null, toastTimer, currentPage = 1, quoteIndex = Math.floor(Date.now() / 12000) % 7, quoteTimer;
 let mediaDbPromise, formMedia = [], formMediaToken = 0, formObjectUrls = [], detailObjectUrls = [];
 let lastMarkdownField = null;
+let cloudClient = null, cloudUser = null, cloudSaveTimer = null, cloudRetryTimer = null, cloudRetryDelay = 5000, authMode = 'signin';
+const pendingCloudImageDeletes = new Set();
 const quotes = [
   { text:'“Great things are not done by impulse,\nbut by a series of small things brought together.”', by:'VAN GOGH · LETTER 274' },
   { text:'“Confusion is part of the map.”', by:'A NOTE TO SELF' },
@@ -41,14 +46,100 @@ const quotes = [
   { text:'“Today’s almost is tomorrow’s understanding.”', by:'A NOTE TO SELF' }
 ];
 
-function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, journals, activeJournalId, entries })); $('#storage-status').textContent = 'SAVED ON THIS DEVICE'; return true; } catch { $('#storage-status').textContent = 'STORAGE FULL — EXPORT A BACKUP'; showToast('This browser is out of space. Export a backup.'); return false; } }
+function stateSnapshot() { return { version: 3, updatedAt: localStateUpdatedAt ? new Date(localStateUpdatedAt).toISOString() : new Date().toISOString(), journals, activeJournalId, entries }; }
+function save() {
+  localStateUpdatedAt = Date.now();
+  try { localStorage.setItem(activeStorageKey, JSON.stringify(stateSnapshot())); }
+  catch { $('#storage-status').textContent = 'STORAGE FULL — EXPORT A BACKUP'; showToast('This browser is out of space. Export a backup.'); return false; }
+  if (cloudClient && cloudUser) {
+    $('#storage-status').textContent = 'SYNCING…';
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => { void syncCloudState(); }, 350);
+  } else $('#storage-status').textContent = 'SAVED ON THIS DEVICE';
+  return true;
+}
+function applyState(state) {
+  if (!state || typeof state !== 'object') return;
+  journals = Array.isArray(state.journals) && state.journals.length ? state.journals : [{ id: DEFAULT_JOURNAL_ID, name: 'Practice log', createdAt: new Date().toISOString() }];
+  entries = (Array.isArray(state.entries) ? state.entries : []).map((entry) => ({ kind: entry.kind || 'problem', ...entry, journalId: entry.journalId || journals[0].id, images: Array.isArray(entry.images) ? entry.images : [] }));
+  activeJournalId = journals.some((journal) => journal.id === state.activeJournalId) ? state.activeJournalId : journals[0].id;
+}
+function cloudConfigured() {
+  const config = window.LBL_SUPABASE_CONFIG;
+  return !!(window.supabase?.createClient && config?.url?.startsWith('https://') && !config.url.includes('YOUR_PROJECT_REF') && config.anonKey && !config.anonKey.includes('YOUR_SUPABASE'));
+}
+async function syncCloudState() {
+  if (!cloudClient || !cloudUser) return;
+  try {
+    const referenced = new Map();
+    for (const entry of entries) for (const image of entry.images || []) referenced.set(image.id, image);
+    for (const image of referenced.values()) {
+      const path = `${cloudUser.id}/${image.id}`;
+      const { data: existing } = await cloudClient.storage.from('journal-images').list(cloudUser.id, { search: image.id, limit: 1 });
+      if (existing?.some((item) => item.name === image.id)) continue;
+      const record = await getMedia(image.id).catch(() => null);
+      if (!record?.blob) continue;
+      const { error: uploadError } = await cloudClient.storage.from('journal-images').upload(path, record.blob, { upsert: true, contentType: record.blob.type || 'image/webp' });
+      if (uploadError) throw uploadError;
+    }
+    const snapshot = stateSnapshot();
+    const { error } = await cloudClient.from('journal_state').upsert({ user_id: cloudUser.id, data: snapshot, updated_at: snapshot.updatedAt });
+    if (error) throw error;
+    const ownPathsToRemove = [...pendingCloudImageDeletes].filter((path) => path.startsWith(`${cloudUser.id}/`));
+    if (ownPathsToRemove.length) {
+      const { error: deleteError } = await cloudClient.storage.from('journal-images').remove(ownPathsToRemove);
+      if (deleteError) throw deleteError;
+      ownPathsToRemove.forEach((path) => pendingCloudImageDeletes.delete(path));
+    }
+    localStateUpdatedAt = Date.parse(snapshot.updatedAt) || Date.now();
+    try { localStorage.setItem(activeStorageKey, JSON.stringify(stateSnapshot())); localStorage.removeItem(STORAGE_KEY); } catch {}
+    clearTimeout(cloudRetryTimer); cloudRetryDelay = 5000;
+    $('#storage-status').textContent = 'SYNCED TO YOUR ACCOUNT';
+  } catch (error) {
+    $('#storage-status').textContent = 'SYNC PAUSED · RETRYING';
+    console.error('Journal sync failed:', error);
+    clearTimeout(cloudRetryTimer); cloudRetryTimer = setTimeout(() => { void syncCloudState(); }, cloudRetryDelay); cloudRetryDelay = Math.min(cloudRetryDelay * 2, 60000);
+  }
+}
+async function loadCloudState(user) {
+  if (user) {
+    activeStorageKey = `${STORAGE_KEY}:user:${user.id}`;
+    const accountCache = localStorage.getItem(activeStorageKey);
+    hasAccountCache = !!accountCache;
+    if (accountCache) { try { const cached = JSON.parse(accountCache); applyState(cached); localStateUpdatedAt = Date.parse(cached.updatedAt) || 0; } catch { hasAccountCache = false; } }
+  } else { activeStorageKey = STORAGE_KEY; hasAccountCache = false; }
+  cloudUser = user;
+  $('#cloud-account-button').textContent = user ? user.email : 'Connect';
+  $('#auth-signout').classList.toggle('hidden', !user);
+  $('#auth-mode-toggle').classList.toggle('hidden', !!user);
+  $('.auth-password-field').classList.toggle('hidden', !!user);
+  $('#auth-submit').classList.toggle('hidden', !!user);
+  if (!user) { $('#storage-status').textContent = 'SAVED ON THIS DEVICE'; return; }
+  $('#storage-status').textContent = 'LOADING YOUR JOURNAL…';
+  const { data, error } = await cloudClient.from('journal_state').select('data').eq('user_id', user.id).maybeSingle();
+  if (error) { $('#storage-status').textContent = 'SYNC SETUP NEEDED'; console.error('Could not load cloud journal:', error); showToast('Could not load your cloud journal. Check the Supabase setup.'); return; }
+  if (data?.data) {
+    const remoteAt = Date.parse(data.data.updatedAt || data.updated_at) || 0;
+    if (hasAccountCache && localStateUpdatedAt > remoteAt) await syncCloudState();
+    else { applyState(data.data); localStateUpdatedAt = remoteAt; try { localStorage.setItem(activeStorageKey, JSON.stringify(stateSnapshot())); localStorage.removeItem(STORAGE_KEY); } catch {} }
+  }
+  else await syncCloudState();
+  currentPage = 1; render();
+}
+async function initializeCloud() {
+  if (!cloudConfigured()) { $('#cloud-account-button').title = 'Add your Supabase URL and publishable key to supabase-config.js to enable cloud sync.'; return; }
+  cloudClient = window.supabase.createClient(window.LBL_SUPABASE_CONFIG.url, window.LBL_SUPABASE_CONFIG.anonKey);
+  const { data: { session } } = await cloudClient.auth.getSession();
+  if (session?.user) await loadCloudState(session.user);
+  cloudClient.auth.onAuthStateChange((_event, sessionNow) => { void loadCloudState(sessionNow?.user || null); });
+}
 function esc(value = '') { return String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
 function openMediaDb() { if (!('indexedDB' in window)) return Promise.reject(new Error('Image storage is unavailable in this browser.')); if (mediaDbPromise) return mediaDbPromise; mediaDbPromise = new Promise((resolve, reject) => { const request = indexedDB.open('little-by-little-media', 1); request.onupgradeneeded = () => request.result.createObjectStore('images', { keyPath: 'id' }); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); return mediaDbPromise; }
 async function mediaRequest(mode, action) { const db = await openMediaDb(); return new Promise((resolve, reject) => { const tx = db.transaction('images', mode); const req = action(tx.objectStore('images')); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
 const getMedia = (id) => mediaRequest('readonly', (store) => store.get(id));
 const putMedia = (record) => mediaRequest('readwrite', (store) => store.put(record));
 const deleteMedia = (id) => mediaRequest('readwrite', (store) => store.delete(id));
-async function deleteUnusedMedia(before, after) { const keep = new Set(after.flatMap((entry) => (entry.images || []).map((image) => image.id))); const old = new Set(before.flatMap((entry) => (entry.images || []).map((image) => image.id))); await Promise.all([...old].filter((id) => !keep.has(id)).map((id) => deleteMedia(id).catch(() => {}))); }
+async function deleteUnusedMedia(before, after) { const keep = new Set(after.flatMap((entry) => (entry.images || []).map((image) => image.id))); const old = new Set(before.flatMap((entry) => (entry.images || []).map((image) => image.id))); const removed = [...old].filter((id) => !keep.has(id)); await Promise.all(removed.map((id) => deleteMedia(id).catch(() => {}))); if (cloudClient && cloudUser) removed.forEach((id) => pendingCloudImageDeletes.add(`${cloudUser.id}/${id}`)); }
 function daysFromToday(iso) { const a = new Date(`${todayISO()}T12:00:00`), b = new Date(`${iso}T12:00:00`); return Math.round((a - b) / 86400000); }
 function weekStart() { const d = new Date(`${todayISO()}T12:00:00`); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); }
 function currentJournal() { return journals.find((journal) => journal.id === activeJournalId) || journals[0]; }
@@ -91,7 +182,7 @@ function renderFormMedia() {
     fields.append(name, caption, remove); card.append(img, fields); host.append(card);
   });
 }
-async function loadFormMedia(images, token) { for (const image of images || []) { try { const record = await getMedia(image.id); if (record && token === formMediaToken) { const preview = URL.createObjectURL(record.blob); formObjectUrls.push(preview); formMedia.push({ ...image, preview, existing: true }); } } catch { /* Missing media leaves its page text intact. */ } } if (token === formMediaToken) renderFormMedia(); }
+async function loadFormMedia(images, token) { for (const image of images || []) { try { let record = await getMedia(image.id).catch(() => null); if (!record?.blob && cloudClient && cloudUser) { const { data, error } = await cloudClient.storage.from('journal-images').createSignedUrl(`${cloudUser.id}/${image.id}`, 3600); if (!error && data?.signedUrl) { const response = await fetch(data.signedUrl); if (response.ok) { record = { id:image.id, name:image.name || 'Illustration', blob:await response.blob() }; await putMedia(record); } } } if (record?.blob && token === formMediaToken) { const preview = URL.createObjectURL(record.blob); formObjectUrls.push(preview); formMedia.push({ ...image, preview, existing: true }); } } catch { /* Missing media leaves its page text intact. */ } } if (token === formMediaToken) renderFormMedia(); }
 function openForm(entry = null) {
   revokeUrls(formObjectUrls); const token = ++formMediaToken; formMedia = [];
   const form = $('#entry-form'); form.reset(); form.elements.id.value = entry?.id || ''; form.elements.title.value = entry?.title || ''; form.elements.date.value = entry?.date || todayISO(); form.elements.tag.value = entry?.tag || '';
@@ -166,7 +257,7 @@ function renderMarkdown(source) {
 }
 function detailSection(title, text, cls = '') { return text ? `<section class="detail-section ${cls}"><h3>${title}</h3><div class="markdown-body">${renderMarkdown(text)}</div></section>` : ''; }
 function clearDetailUrls() { revokeUrls(detailObjectUrls); }
-async function renderDetailImages(images) { const host = $('#detail-images'); if (!host) return; host.replaceChildren(); for (const image of images || []) { try { const record = await getMedia(image.id); if (!record || !$('#detail-images')) continue; const url = URL.createObjectURL(record.blob); detailObjectUrls.push(url); const figure = document.createElement('figure'); figure.className = 'detail-figure'; const img = document.createElement('img'); img.src = url; img.alt = image.caption || image.name || 'Journal illustration'; figure.append(img); if (image.caption) { const caption = document.createElement('figcaption'); caption.textContent = image.caption; figure.append(caption); } host.append(figure); } catch { /* Text remains available when media is missing. */ } } }
+async function renderDetailImages(images) { const host = $('#detail-images'); if (!host) return; host.replaceChildren(); for (const image of images || []) { try { const figure = document.createElement('figure'); figure.className = 'detail-figure'; const img = document.createElement('img'); img.alt = image.caption || image.name || 'Journal illustration'; const record = await getMedia(image.id).catch(() => null); if (record?.blob) { const url = URL.createObjectURL(record.blob); detailObjectUrls.push(url); img.src = url; } else if (cloudClient && cloudUser) { const { data, error } = await cloudClient.storage.from('journal-images').createSignedUrl(`${cloudUser.id}/${image.id}`, 3600); if (error || !data?.signedUrl) continue; img.src = data.signedUrl; } else continue; figure.append(img); if (image.caption) { const caption = document.createElement('figcaption'); caption.textContent = image.caption; figure.append(caption); } host.append(figure); } catch { /* Text remains available when media is missing. */ } } }
 function openDetail(id) {
   const e = entries.find((item) => item.id === id); if (!e) return; clearDetailUrls(); selectedEntryId = id; const d = dateLabel(e.date), topic = e.kind === 'topic';
   const body = topic ? `${detailSection('THE IDEA, IN YOUR WORDS', e.notes)}${detailSection('WHEN TO USE IT', e.whenToUse)}${detailSection('COST / COMPLEXITY', e.complexity)}` : `${detailSection('THE QUESTION', e.description)}<div class="detail-grid">${detailSection('INPUT FORMAT', e.input)}${detailSection('OUTPUT FORMAT', e.output)}</div>${detailSection('CONSTRAINTS', e.constraints)}${detailSection('THE TRICKY PART', e.hard)}${detailSection('MY OWN EXPLANATION', e.reflection)}`;
@@ -183,10 +274,39 @@ async function compressImage(file) {
   try { const bitmap = await createImageBitmap(file); const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height)), canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale)); canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close(); return await new Promise((resolve) => canvas.toBlob((blob) => resolve(blob || file), 'image/webp', .86)); } catch { return file; }
 }
 function blobToDataUrl(blob) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); }); }
-async function buildBackup() { const media = [], seen = new Set(); for (const entry of entries) for (const image of entry.images || []) { if (seen.has(image.id)) continue; seen.add(image.id); const record = await getMedia(image.id); if (record) media.push({ id: image.id, name: record.name || image.name, type: record.blob.type, data: await blobToDataUrl(record.blob) }); } return { version:3, exportedAt:new Date().toISOString(), journals, activeJournalId, entries, media }; }
+async function buildBackup() { const media = [], seen = new Set(); for (const entry of entries) for (const image of entry.images || []) { if (seen.has(image.id)) continue; seen.add(image.id); let record = await getMedia(image.id).catch(() => null); if (!record?.blob && cloudClient && cloudUser) { const { data } = await cloudClient.storage.from('journal-images').createSignedUrl(`${cloudUser.id}/${image.id}`, 3600); if (data?.signedUrl) { const response = await fetch(data.signedUrl); if (response.ok) record = { name:image.name, blob:await response.blob() }; } } if (record?.blob) media.push({ id:image.id, name:record.name || image.name, type:record.blob.type, data:await blobToDataUrl(record.blob) }); } return { version:3, exportedAt:new Date().toISOString(), journals, activeJournalId, entries, media }; }
 async function restoreMedia(items) { for (const item of items || []) { if (!item.id || !item.data) continue; const blob = await (await fetch(item.data)).blob(); await putMedia({ id:item.id, name:item.name || 'Illustration', blob }); } }
 
 $('#today').textContent = new Date().toLocaleDateString('en', { weekday:'short', month:'short', day:'numeric' }).toUpperCase(); $('#year').textContent = new Date().getFullYear(); setQuote(quoteIndex, false); resetQuoteTimer(); render();
+$('#cloud-account-button').addEventListener('click', () => {
+  if (!cloudConfigured()) { $('#auth-message').textContent = 'Cloud sync needs your Supabase project URL and publishable key in supabase-config.js, plus the database setup SQL.'; }
+  else if (cloudUser) { $('#auth-copy').textContent = `Signed in as ${cloudUser.email}. Your pages and illustrations sync to your private Supabase account.`; $('#auth-message').textContent = ''; }
+  else { $('#auth-copy').textContent = 'Sign in or create an account to sync your pages and illustrations privately.'; $('#auth-message').textContent = ''; }
+  $('#auth-title').innerHTML = cloudUser ? 'Your ideas<br /><em>in step.</em>' : 'Keep your ideas<br /><em>in step.</em>';
+  $('#auth-dialog').showModal();
+});
+$('#auth-mode-toggle').addEventListener('click', () => {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  $('#auth-title').innerHTML = authMode === 'signup' ? 'Make room<br /><em>everywhere.</em>' : 'Keep your ideas<br /><em>in step.</em>';
+  $('#auth-submit').innerHTML = authMode === 'signup' ? 'Create account <span>↗</span>' : 'Sign in <span>↗</span>';
+  $('.auth-password-field input').autocomplete = authMode === 'signup' ? 'new-password' : 'current-password';
+  $('#auth-mode-toggle').textContent = authMode === 'signup' ? 'I already have an account' : 'Create account';
+  $('#auth-message').textContent = '';
+});
+$('#auth-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!cloudClient) { $('#auth-message').textContent = 'Add your Supabase project URL and publishable key to supabase-config.js first.'; return; }
+  const form = event.currentTarget, email = form.elements.email.value.trim(), password = form.elements.password.value, submit = $('#auth-submit');
+  submit.disabled = true; $('#auth-message').textContent = authMode === 'signup' ? 'Creating your private account…' : 'Signing in…';
+  try {
+    const result = authMode === 'signup' ? await cloudClient.auth.signUp({ email, password }) : await cloudClient.auth.signInWithPassword({ email, password });
+    if (result.error) throw result.error;
+    if (authMode === 'signup' && !result.data.session) $('#auth-message').textContent = 'Account created. Check your email to confirm it, then sign in here.';
+    else { $('#auth-message').textContent = 'Connected. Bringing your journal into sync…'; await loadCloudState(result.data.user); setTimeout(() => $('#auth-dialog').close(), 600); }
+  } catch (error) { $('#auth-message').textContent = error.message || 'Could not connect. Please try again.'; }
+  finally { submit.disabled = false; }
+});
+$('#auth-signout').addEventListener('click', async () => { if (!cloudClient) return; const { error } = await cloudClient.auth.signOut(); if (error) { $('#auth-message').textContent = error.message; return; } entries = seedEntries.map((entry) => ({ ...entry, journalId:DEFAULT_JOURNAL_ID, images:[] })); journals = [{ id:DEFAULT_JOURNAL_ID, name:'Practice log', createdAt:new Date().toISOString() }]; activeJournalId = DEFAULT_JOURNAL_ID; localStateUpdatedAt = 0; activeStorageKey = STORAGE_KEY; hasAccountCache = false; localStorage.removeItem(STORAGE_KEY); render(); $('#auth-dialog').close(); showToast('Signed out. Your cloud journal is safe in your account.'); });
 $('#new-entry').addEventListener('click', () => openForm()); $('#empty-add').addEventListener('click', () => openForm()); $('#page-kind').addEventListener('change', togglePageKind);
 $('#page-images').addEventListener('change', (event) => { for (const file of event.target.files) { if (!file.type.startsWith('image/')) { showToast('Please choose an image file.'); continue; } if (file.size > MAX_IMAGE_BYTES) { showToast(`${file.name} is over 10 MB. Choose a smaller image.`); continue; } const preview = URL.createObjectURL(file); formObjectUrls.push(preview); formMedia.push({ file, name:file.name, caption:'', preview }); } event.target.value = ''; renderFormMedia(); });
 $('#search').addEventListener('input', () => { currentPage = 1; render(); }); $('#filter-button').addEventListener('click', () => { const tray = $('#filter-tray'), open = tray.classList.toggle('hidden') === false; $('#filter-button').setAttribute('aria-expanded', String(open)); });
@@ -247,3 +367,5 @@ window.addEventListener('load', () => {
   if (window.renderMathInElement) $('#entries').querySelectorAll('.entry-preview').forEach((preview) => window.renderMathInElement(preview, { delimiters:[{ left:'$$', right:'$$', display:true },{ left:'$', right:'$', display:false },{ left:'\\(', right:'\\)', display:false },{ left:'\\[', right:'\\]', display:true }], throwOnError:false, strict:false }));
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+window.addEventListener('online', () => { if (cloudClient && cloudUser) void syncCloudState(); });
+void initializeCloud();

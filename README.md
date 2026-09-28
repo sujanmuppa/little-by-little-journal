@@ -1,6 +1,6 @@
 # little by little
 
-A quiet, art-directed study journal for computer science ideas and practice problems. It is a static site with no build step or required service account.
+A quiet, art-directed study journal for computer science ideas and practice problems. Cloud sync uses Supabase Free; the site itself remains static and has no build step.
 
 ## Run it locally
 
@@ -16,16 +16,16 @@ Then visit `http://localhost:4173`.
 
 - A journal is a subject notebook. Create one for a subject such as Algorithms, Operating Systems, or Databases; rename or delete it from the journal switcher. A library always keeps at least one journal.
 - Each journal contains individual pages. Choose **Concept / Topic** for explanations, when-to-use notes, complexity, examples, and illustrations. Choose **Practice Problem** for question statements, input/output, constraints, code, sticking points, and your own explanation.
-- The editor accepts Markdown as plain text and includes quick formatting controls for headings, emphasis, lists, quotes, and code. Saved page notes render Markdown safely, including fenced code blocks and web links. LaTeX renders in saved notes and compact list previews with `$...$` inline, `$$...$$` for display equations, and `\(...\)` / `\[...\]` delimiters. KaTeX is bundled locally, so math typesetting also works offline. Your saved text stays on this device.
-- Open a page to edit or delete it. Add captions to uploaded illustrations. Images are resized and stored locally in IndexedDB; page text is stored locally in this browser. Neither is sent to a server.
+- The editor accepts Markdown as plain text and includes quick formatting controls for headings, emphasis, lists, quotes, and code. Saved page notes render Markdown safely, including fenced code blocks and web links. LaTeX renders in saved notes and compact list previews with `$...$` inline, `$$...$$` for display equations, and `\(...\)` / `\[...\]` delimiters. KaTeX is bundled locally, so math typesetting also works offline.
+- Open a page to edit or delete it. Add captions to uploaded illustrations. With cloud sync connected, page text is stored in a private per-user Postgres row and illustrations in a private Supabase Storage bucket. Without Supabase configuration, the app continues in device-only mode.
 - The library displays at most 12 pages at a time and adds page navigation as it grows. Search, filters, activity counts, and the random surprise page are scoped to the selected journal.
 - Quotes rotate every 12 seconds while the app is open. The ↻ control advances immediately.
 
 ## Backups and privacy
 
-Use the backup button to export journals, pages, and images together as a JSON file. Restore that file in another browser to transfer your library. Keep a backup somewhere safe: clearing browser data or using another device does not move your local journal automatically.
+Use the backup button to export journals, pages, and images together as a JSON file. Restore that file in another browser to transfer your library. Keep a backup somewhere safe.
 
-The app has no sign-in or cloud sync. For cross-device syncing, add authentication and a hosted database before treating this as a shared, long-term service. Supabase has a free tier that could support a later sync edition, but this build deliberately keeps private notes on-device.
+For cloud sync, create a Supabase Free project and follow [SUPABASE_SETUP.md](./SUPABASE_SETUP.md). The setup creates private tables and storage policies; users sign in with email and password. Existing device data is uploaded the first time an account connects if that account has no cloud journal yet.
 
 ## Free deployment
 
