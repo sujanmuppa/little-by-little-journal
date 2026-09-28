@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11131b" />
+  <meta name="description" content="A quiet place to keep the questions that teach you something." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>little by little — a problem journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="art-direction.css" />
+</head>
+<body>
+  <div class="paper-grain" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="wordmark" href="#top" aria-label="Little by little home"><span class="mark">l<span>.</span></span><span class="wordmark-name">little by little</span></a>
+      <div class="topbar-right">
+        <div class="journal-switch-wrap">
+          <button class="journal-switch" id="journal-switch" type="button" aria-expanded="false" aria-haspopup="true"><span class="journal-switch-name" id="active-journal-name">Practice log</span><span class="switch-caret">⌄</span></button>
+          <div class="journal-menu hidden" id="journal-menu"><span class="journal-menu-label">YOUR JOURNALS</span><div id="journal-list"></div><button class="new-journal-button" id="new-journal-button" type="button"><span>＋</span> New journal</button></div>
+        </div>
+        <span class="today-label"><span class="live-dot"></span><span id="today"></span></span>
+        <button class="icon-button" id="backup-button" type="button" title="Back up or restore journal" aria-label="Back up or restore journal">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> YOUR PRACTICE, IN PAGES</p>
+          <h1 id="hero-title">Still<br /><em>learning.</em></h1>
+          <p class="hero-note">A journal for the questions that stay with you.</p>
+          <button class="primary-button" id="new-entry" type="button"><span class="plus">＋</span> Add a page <span class="button-arrow">↗</span></button>
+        </div>
+        <aside class="artwork" aria-label="Abstract artwork: a study in small beginnings">
+          <div class="artwork-label"><span>STUDY Nº 001</span><span>IN PROGRESS</span></div>
+          <svg class="artwork-svg" viewBox="0 0 520 440" role="img" aria-label="A vivid abstract study in green, violet, coral, and cream">
+            <defs>
+              <radialGradient id="sun" cx="35%" cy="28%"><stop offset="0" stop-color="#edff80"/><stop offset="1" stop-color="#caff36"/></radialGradient>
+              <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9990ff"/><stop offset="1" stop-color="#5845de"/></linearGradient>
+            </defs>
+            <circle cx="274" cy="211" r="163" fill="url(#violet)"/>
+            <circle cx="274" cy="211" r="163" fill="transparent" stroke="#a69aff" stroke-width="1"/>
+            <path d="M63 237C71 143 155 75 257 76c115 1 201 80 201 182" fill="none" stroke="#caff36" stroke-width="1.2" opacity=".8"/>
+            <circle cx="254" cy="198" r="102" fill="url(#sun)"/>
+            <path d="M159 220c18-57 59-104 105-108 43-5 77 27 79 65 3 50-44 94-76 117-34 24-73 38-100 24-26-14-22-57-8-98Z" fill="#f66b4e"/>
+            <path d="M177 268c37 4 74-15 101-44 28-30 43-72 29-103" fill="none" stroke="#171b29" stroke-width="18" stroke-linecap="round"/>
+            <path d="M214 313c51 25 112 9 140-36 29-45 22-106-10-138" fill="none" stroke="#f2eee4" stroke-width="2"/>
+            <circle cx="365" cy="142" r="8" fill="#caff36"/>
+            <circle cx="151" cy="315" r="4" fill="#f2eee4"/>
+            <path d="M106 122v18m-9-9h18M402 296v16m-8-8h16" stroke="#f2eee4" stroke-width="1.5" opacity=".8"/>
+          </svg>
+          <div class="artwork-caption"><span id="quote-text" class="quote-text" aria-live="polite">“Great things are not done by impulse,<br />but by a series of small things brought together.”</span><span id="quote-by" class="quote-by">VAN GOGH · LETTER 274</span><button class="quote-next" id="quote-next" type="button" aria-label="Show another quote" title="Another note">↻</button></div>
+        </aside>
+      </section>
+
+      <section class="overview" aria-label="Journal overview">
+        <div class="overview-title"><span class="section-kicker" id="journal-subtitle">A SUBJECT NOTEBOOK</span><span class="overview-rule"></span><span id="entry-count" class="entry-count">00 PAGES</span></div>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-number" id="stat-total">0</span><span class="stat-label">pages kept</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-number" id="stat-week">0</span><span class="stat-label">this week</span></div>
+          <div class="stat-divider"></div>
+          <div class="stat"><span class="stat-number" id="stat-streak">0</span><span class="stat-label">day streak <span class="sparkle">✳</span></span></div>
+        </div>
+        <div class="week-strip" id="week-strip" aria-label="Practice activity this week"></div>
+      </section>
+
+      <section class="library" aria-labelledby="library-title">
+        <div class="library-heading">
+          <div><p class="eyebrow library-eyebrow">ONE IDEA PER PAGE</p><h2 id="library-title">The pages<span class="period">.</span></h2></div>
+          <div class="library-tools">
+            <label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg><input id="search" type="search" placeholder="Find a page…" aria-label="Search pages"/><kbd>⌘ K</kbd></label>
+            <button class="filter-button" id="filter-button" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg> Filter <span id="filter-count" class="filter-count hidden">0</span></button>
+            <button class="surprise-button" id="surprise-button" type="button" title="Open a random question from this journal"><span class="surprise-glyph" aria-hidden="true">✳</span><span>Surprise me</span></button>
+          </div>
+        </div>
+        <div class="filter-tray hidden" id="filter-tray"><span class="filter-caption">SHOW</span><button class="filter-chip active" data-filter="all">Everything</button><button class="filter-chip" data-filter="week">This week</button><button class="filter-chip" data-filter="insight">Has a takeaway</button><button class="filter-chip" data-filter="code">Has code</button></div>
+        <div class="entries" id="entries" aria-live="polite"></div>
+        <nav class="entry-pagination hidden" id="entry-pagination" aria-label="Page navigation"><span class="page-summary" id="page-summary"></span><div><button class="page-button" id="previous-page" type="button" aria-label="Previous page">←</button><button class="page-button" id="next-page" type="button" aria-label="Next page">→</button></div></nav>
+        <div class="empty-state hidden" id="empty-state"><span class="empty-sun">☼</span><h3 id="empty-title">A blank page is full of possibility.</h3><p id="empty-copy">Start with one idea you want to understand.</p><button class="text-button" id="empty-add">Write your first page <span>↗</span></button></div>
+        <div class="collection-foot"><span>ONE IDEA, ONE PAGE</span><span class="collection-foot-flower">✳</span><span id="storage-status">SAVED ON THIS DEVICE</span></div>
+      </section>
+    </main>
+
+    <footer><span>© <span id="year"></span> LITTLE BY LITTLE</span><span>show up, stay curious <span class="footer-heart">♥</span></span><button id="clear-demo" class="footer-link hidden" type="button">Clear sample entries</button></footer>
+  </div>
+
+  <dialog id="entry-dialog" class="entry-dialog">
+    <form id="entry-form">
+      <div class="dialog-top"><span class="dialog-kicker" id="dialog-kicker">A NEW PAGE</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div>
+      <h2 id="dialog-title">Give an idea<br /><em>its own page.</em></h2>
+      <p class="dialog-intro" id="dialog-intro">Write it down in a way future you can return to.</p>
+      <input type="hidden" name="id" />
+      <div class="form-grid">
+        <label class="field full"><span>PAGE TITLE / TOPIC NAME <b>*</b></span><input name="title" maxlength="140" required placeholder="e.g. Sliding Window" /></label>
+        <label class="field"><span>PAGE TYPE</span><select name="kind" id="page-kind"><option value="topic">CONCEPT / TOPIC</option><option value="problem">PRACTICE PROBLEM</option></select></label>
+        <label class="field"><span>DATE PRACTICED</span><input name="date" type="date" required /></label>
+        <label class="field"><span>TOPIC / TAG</span><input name="tag" maxlength="32" placeholder="e.g. Arrays, DP" /></label>
+        <div class="concept-fields full field-group">
+          <label class="field full"><span>THE IDEA, IN YOUR WORDS</span><textarea name="notes" rows="7" placeholder="Explain the concept clearly. Break it into steps or add examples…"></textarea></label>
+          <div class="concept-meta">
+            <label class="field"><span>WHEN TO USE IT</span><textarea name="whenToUse" rows="3" placeholder="What signals that this idea fits?"></textarea></label>
+            <label class="field"><span>COST / COMPLEXITY</span><textarea name="complexity" rows="3" placeholder="Time, space, trade-offs…"></textarea></label>
+          </div>
+        </div>
+        <div class="problem-fields full field-group hidden">
+        <label class="field full"><span>THE QUESTION, IN THEIR WORDS</span><textarea name="description" rows="3" placeholder="What are you being asked to solve?"></textarea></label>
+        <label class="field"><span>INPUT FORMAT</span><textarea name="input" rows="2" placeholder="What goes in?"></textarea></label>
+        <label class="field"><span>OUTPUT FORMAT</span><textarea name="output" rows="2" placeholder="What comes out?"></textarea></label>
+        <label class="field full"><span>CONSTRAINTS</span><textarea name="constraints" rows="2" placeholder="Limits, edge cases, assumptions…"></textarea></label>
+        <label class="field full"><span>THE TRICKY PART <i>what felt hard?</i></span><textarea name="hard" rows="3" placeholder="Where did you get stuck? What finally clicked?"></textarea></label>
+        <label class="field full"><span>MY OWN EXPLANATION <i>teach future you</i></span><textarea name="reflection" rows="3" placeholder="Explain the idea like you're talking to a friend."></textarea></label>
+        </div>
+        <label class="field full"><span>CODE OR EXAMPLE <i>optional</i></span><textarea name="code" class="code-input" rows="5" spellcheck="false" placeholder="A small example can make the idea click…"></textarea></label>
+        <section class="field full image-field"><span>IMAGES & DIAGRAMS <i>optional</i></span><label class="image-drop" for="page-images"><span class="image-plus">＋</span><span>Add a photo, sketch, or diagram</span><input id="page-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden /></label><div class="image-preview-list" id="image-preview-list"></div><small class="image-help">Images are resized for your journal and stay on this device.</small></section>
+      </div>
+      <div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button save-button" id="save-page-button" type="submit">Save this page <span>↗</span></button></div>
+      <p class="privacy-note"><span>⌑</span> Your pages stay in this browser. Export a backup to keep them safe.</p>
+    </form>
+  </dialog>
+
+  <dialog id="detail-dialog" class="detail-dialog"><div id="detail-content"></div></dialog>
+  <dialog id="journal-dialog" class="journal-create-dialog"><form id="journal-form"><div class="dialog-top"><span class="dialog-kicker" id="journal-dialog-kicker">A NEW SUBJECT NOTEBOOK</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2 id="journal-dialog-title">Make a little<br /><em>more room.</em></h2><p class="dialog-intro" id="journal-dialog-intro">Group related ideas into one subject journal.</p><input type="hidden" name="id" /><label class="field"><span>JOURNAL / SUBJECT NAME</span><input name="name" maxlength="40" required placeholder="e.g. Data structures & algorithms" /></label><div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button" id="journal-submit-label" type="submit">Create journal <span>↗</span></button></div></form></dialog>
+  <dialog id="backup-dialog" class="backup-dialog"><div class="dialog-top"><span class="dialog-kicker">YOUR JOURNAL, YOURS</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2>Keep a copy<br /><em>somewhere safe.</em></h2><p>Your entries live on this device. Export a JSON backup to move them or keep a copy. You can also restore a backup here.</p><div class="backup-actions"><button id="export-button" class="primary-button" type="button">Download backup <span>↓</span></button><label class="import-button">Restore from backup <input id="import-file" type="file" accept="application/json,.json" hidden /></label></div><small id="backup-message"></small></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
