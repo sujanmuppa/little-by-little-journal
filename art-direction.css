@@ -69,3 +69,37 @@ h1{font:500 clamp(67px,8.2vw,104px)/.87 var(--sans);letter-spacing:-.095em;color
 .delete-journal-action:hover{color:#ff806a}
 .journal-option-count{flex-shrink:0}
 @media(max-width:540px){.field-group,.concept-meta{grid-template-columns:1fr}.concept-meta{grid-column:auto}.image-preview-list,.detail-images{grid-template-columns:1fr}.image-preview{grid-template-columns:58px 1fr}.image-preview img{width:58px;height:58px}.detail-figure img{max-height:300px}}
+
+/* Give the writing surface room to breathe and make Markdown easy to shape. */
+.entry-dialog{width:min(850px,calc(100vw - 28px));max-height:94vh}
+.entry-dialog form{padding:38px 50px 30px}
+.form-grid{gap:23px 18px}
+.field textarea:not(.code-input){min-height:132px;padding:13px 14px;border:1px solid #383a45;background:#13151d;font:12px/1.8 var(--sans);}
+.field textarea[name="notes"],.field textarea[name="description"],.field textarea[name="hard"],.field textarea[name="reflection"]{min-height:235px}
+.field textarea[name="whenToUse"],.field textarea[name="complexity"]{min-height:158px}
+.field textarea[name="input"],.field textarea[name="output"],.field textarea[name="constraints"]{min-height:130px}
+.field textarea.code-input{min-height:245px;padding:16px!important;font-size:11px!important}
+.field textarea:not(.code-input):focus{border-color:var(--accent);background:#151720}
+.markdown-tools{position:sticky;top:-1px;z-index:2;display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 24px;padding:9px 0;background:#171923;border-bottom:1px solid #353741}
+.markdown-tools-label{margin-right:7px;color:#9295a0;font:7px var(--mono);letter-spacing:.15em}
+.markdown-tools button{min-width:29px;height:27px;padding:0 8px;border:1px solid #393b46;background:#1b1d27;color:#d8d9d3;font:9px var(--mono);cursor:pointer}
+.markdown-tools button:hover,.markdown-tools button:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.markdown-tools-hint{margin-left:auto;color:#818490;font:7px var(--mono);letter-spacing:.02em}
+.markdown-body{color:#d1d1cf;font:12px/1.85 var(--sans);overflow-wrap:anywhere}
+.markdown-body>*:first-child{margin-top:0}
+.markdown-body>*:last-child{margin-bottom:0}
+.markdown-body p{white-space:pre-wrap;margin:0 0 13px}
+.markdown-body h1,.markdown-body h2,.markdown-body h3,.markdown-body h4{color:#f2f0e8;font-family:var(--sans);letter-spacing:-.04em;line-height:1.2;margin:21px 0 9px}
+.markdown-body h1{font-size:25px}.markdown-body h2{font-size:21px}.markdown-body h3{font-size:17px}.markdown-body h4{font-size:14px}
+.markdown-body ul,.markdown-body ol{margin:8px 0 15px;padding-left:22px}
+.markdown-body li{padding-left:4px;margin:4px 0}
+.markdown-body blockquote{margin:13px 0;padding:7px 0 7px 15px;border-left:2px solid var(--accent);color:#b9bdab}
+.markdown-body hr{border:0;border-top:1px solid #41434e;margin:17px 0}
+.markdown-body code{padding:2px 5px;background:#10121a;border:1px solid #343641;color:#d8eaa6;font:10px var(--mono)}
+.markdown-body pre{overflow:auto;margin:12px 0;padding:16px;background:#10121a;border:1px solid #343641;color:#d8eaa6;white-space:pre;font:10px/1.7 var(--mono)}
+.markdown-body pre code{padding:0;border:0;background:none;white-space:pre}
+.markdown-body a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:3px}
+.markdown-body strong{color:#f1f0e9;font-weight:600}
+.markdown-body em{color:#dedcd2}
+.detail-section .markdown-body{margin-top:0}
+@media(max-width:540px){.entry-dialog form{padding:24px 19px 20px}.field textarea:not(.code-input){font-size:11px;min-height:122px}.field textarea[name="notes"],.field textarea[name="description"],.field textarea[name="hard"],.field textarea[name="reflection"]{min-height:205px}.field textarea[name="whenToUse"],.field textarea[name="complexity"]{min-height:140px}.field textarea.code-input{min-height:220px}.markdown-tools{gap:4px;margin-bottom:19px}.markdown-tools button{height:26px;padding:0 6px}.markdown-tools-hint{flex-basis:100%;margin:4px 0 0 1px}}

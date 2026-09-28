@@ -101,6 +101,17 @@
       <div class="dialog-top"><span class="dialog-kicker" id="dialog-kicker">A NEW PAGE</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div>
       <h2 id="dialog-title">Give an idea<br /><em>its own page.</em></h2>
       <p class="dialog-intro" id="dialog-intro">Write it down in a way future you can return to.</p>
+      <div class="markdown-tools" role="toolbar" aria-label="Markdown formatting">
+        <span class="markdown-tools-label">MARKDOWN</span>
+        <button type="button" data-md="heading" title="Heading">H2</button>
+        <button type="button" data-md="bold" title="Bold"><b>B</b></button>
+        <button type="button" data-md="italic" title="Italic"><i>I</i></button>
+        <button type="button" data-md="bullet" title="Bulleted list">• list</button>
+        <button type="button" data-md="quote" title="Quote">❝</button>
+        <button type="button" data-md="inline-code" title="Inline code">`code`</button>
+        <button type="button" data-md="code-block" title="Code block">{ }</button>
+        <span class="markdown-tools-hint">Paste Markdown freely · format the selected text</span>
+      </div>
       <input type="hidden" name="id" />
       <div class="form-grid">
         <label class="field full"><span>PAGE TITLE / TOPIC NAME <b>*</b></span><input name="title" maxlength="140" required placeholder="e.g. Sliding Window" /></label>
@@ -108,21 +119,21 @@
         <label class="field"><span>DATE PRACTICED</span><input name="date" type="date" required /></label>
         <label class="field"><span>TOPIC / TAG</span><input name="tag" maxlength="32" placeholder="e.g. Arrays, DP" /></label>
         <div class="concept-fields full field-group">
-          <label class="field full"><span>THE IDEA, IN YOUR WORDS</span><textarea name="notes" rows="7" placeholder="Explain the concept clearly. Break it into steps or add examples…"></textarea></label>
+          <label class="field full"><span>THE IDEA, IN YOUR WORDS</span><textarea name="notes" rows="10" placeholder="Explain the concept clearly. Break it into steps or add examples…"></textarea></label>
           <div class="concept-meta">
-            <label class="field"><span>WHEN TO USE IT</span><textarea name="whenToUse" rows="3" placeholder="What signals that this idea fits?"></textarea></label>
-            <label class="field"><span>COST / COMPLEXITY</span><textarea name="complexity" rows="3" placeholder="Time, space, trade-offs…"></textarea></label>
+            <label class="field"><span>WHEN TO USE IT</span><textarea name="whenToUse" rows="5" placeholder="What signals that this idea fits?"></textarea></label>
+            <label class="field"><span>COST / COMPLEXITY</span><textarea name="complexity" rows="5" placeholder="Time, space, trade-offs…"></textarea></label>
           </div>
         </div>
         <div class="problem-fields full field-group hidden">
-        <label class="field full"><span>THE QUESTION, IN THEIR WORDS</span><textarea name="description" rows="3" placeholder="What are you being asked to solve?"></textarea></label>
-        <label class="field"><span>INPUT FORMAT</span><textarea name="input" rows="2" placeholder="What goes in?"></textarea></label>
-        <label class="field"><span>OUTPUT FORMAT</span><textarea name="output" rows="2" placeholder="What comes out?"></textarea></label>
-        <label class="field full"><span>CONSTRAINTS</span><textarea name="constraints" rows="2" placeholder="Limits, edge cases, assumptions…"></textarea></label>
-        <label class="field full"><span>THE TRICKY PART <i>what felt hard?</i></span><textarea name="hard" rows="3" placeholder="Where did you get stuck? What finally clicked?"></textarea></label>
-        <label class="field full"><span>MY OWN EXPLANATION <i>teach future you</i></span><textarea name="reflection" rows="3" placeholder="Explain the idea like you're talking to a friend."></textarea></label>
+        <label class="field full"><span>THE QUESTION, IN THEIR WORDS</span><textarea name="description" rows="6" placeholder="What are you being asked to solve?"></textarea></label>
+        <label class="field"><span>INPUT FORMAT</span><textarea name="input" rows="4" placeholder="What goes in?"></textarea></label>
+        <label class="field"><span>OUTPUT FORMAT</span><textarea name="output" rows="4" placeholder="What comes out?"></textarea></label>
+        <label class="field full"><span>CONSTRAINTS</span><textarea name="constraints" rows="4" placeholder="Limits, edge cases, assumptions…"></textarea></label>
+        <label class="field full"><span>THE TRICKY PART <i>what felt hard?</i></span><textarea name="hard" rows="6" placeholder="Where did you get stuck? What finally clicked?"></textarea></label>
+        <label class="field full"><span>MY OWN EXPLANATION <i>teach future you</i></span><textarea name="reflection" rows="6" placeholder="Explain the idea like you're talking to a friend."></textarea></label>
         </div>
-        <label class="field full"><span>CODE OR EXAMPLE <i>optional</i></span><textarea name="code" class="code-input" rows="5" spellcheck="false" placeholder="A small example can make the idea click…"></textarea></label>
+        <label class="field full"><span>CODE OR EXAMPLE <i>optional</i></span><textarea name="code" class="code-input" rows="9" spellcheck="false" placeholder="A small example can make the idea click…"></textarea></label>
         <section class="field full image-field"><span>IMAGES & DIAGRAMS <i>optional</i></span><label class="image-drop" for="page-images"><span class="image-plus">＋</span><span>Add a photo, sketch, or diagram</span><input id="page-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden /></label><div class="image-preview-list" id="image-preview-list"></div><small class="image-help">Images are resized for your journal and stay on this device.</small></section>
       </div>
       <div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button save-button" id="save-page-button" type="submit">Save this page <span>↗</span></button></div>

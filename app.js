@@ -30,6 +30,7 @@ entries = (entries || []).map((entry) => ({ kind: entry.kind || 'problem', ...en
 if (!journals.some((j) => j.id === activeJournalId)) activeJournalId = journals[0].id;
 let activeFilter = 'all', selectedEntryId = null, toastTimer, currentPage = 1, quoteIndex = Math.floor(Date.now() / 12000) % 7, quoteTimer;
 let mediaDbPromise, formMedia = [], formMediaToken = 0, formObjectUrls = [], detailObjectUrls = [];
+let lastMarkdownField = null;
 const quotes = [
   { text:'“Great things are not done by impulse,\nbut by a series of small things brought together.”', by:'VAN GOGH · LETTER 274' },
   { text:'“Confusion is part of the map.”', by:'A NOTE TO SELF' },
@@ -95,10 +96,63 @@ function openForm(entry = null) {
   const form = $('#entry-form'); form.reset(); form.elements.id.value = entry?.id || ''; form.elements.title.value = entry?.title || ''; form.elements.date.value = entry?.date || todayISO(); form.elements.tag.value = entry?.tag || '';
   form.elements.kind.value = entry?.kind || 'topic'; form.elements.notes.value = entry?.notes || ''; form.elements.whenToUse.value = entry?.whenToUse || ''; form.elements.complexity.value = entry?.complexity || '';
   ['description','input','output','constraints','code','hard','reflection'].forEach((name) => { form.elements[name].value = entry?.[name] || ''; });
+  lastMarkdownField = form.elements[form.elements.kind.value === 'topic' ? 'notes' : 'description'];
   $('#dialog-title').innerHTML = entry ? 'Return to the<br /><em>thinking.</em>' : 'Give an idea<br /><em>its own page.</em>'; $('#dialog-kicker').textContent = entry ? 'A PAGE IN PROGRESS' : 'A NEW PAGE'; $('#save-page-button').innerHTML = entry ? 'Save changes <span>↗</span>' : 'Save this page <span>↗</span>'; togglePageKind(); renderFormMedia(); $('#entry-dialog').showModal(); if (entry?.images?.length) void loadFormMedia(entry.images, token);
 }
-function togglePageKind() { const topic = $('#entry-form').elements.kind.value === 'topic'; $('.concept-fields').classList.toggle('hidden', !topic); $('.problem-fields').classList.toggle('hidden', topic); }
-function detailSection(title, text, cls = '') { return text ? `<section class="detail-section ${cls}"><h3>${title}</h3><p>${esc(text)}</p></section>` : ''; }
+function togglePageKind() { const topic = $('#entry-form').elements.kind.value === 'topic'; $('.concept-fields').classList.toggle('hidden', !topic); $('.problem-fields').classList.toggle('hidden', topic); if (!lastMarkdownField || lastMarkdownField.closest('.field-group')?.classList.contains('hidden')) lastMarkdownField = $('#entry-form').elements[topic ? 'notes' : 'description']; }
+$('#entry-form').addEventListener('focusin', (event) => { if (event.target.matches('textarea')) lastMarkdownField = event.target; });
+$('.markdown-tools').addEventListener('click', (event) => {
+  const action = event.target.closest('[data-md]')?.dataset.md; if (!action) return;
+  let field = lastMarkdownField;
+  if (!field || !field.isConnected || field.closest('.field-group')?.classList.contains('hidden')) { field = $('#entry-form').elements[$('#entry-form').elements.kind.value === 'topic' ? 'notes' : 'description']; lastMarkdownField = field; }
+  field.focus(); const start = field.selectionStart, end = field.selectionEnd, selected = field.value.slice(start, end);
+  const linePrefix = { heading:'## ', bullet:'- ', quote:'> ' }[action];
+  if (linePrefix) {
+    const body = selected || 'Write here', formatted = body.split('\n').map((line) => `${linePrefix}${line}`).join('\n');
+    field.setRangeText(formatted, start, end, 'select');
+  } else {
+    const wrap = { bold:['**','**','bold text'], italic:['*','*','italic text'], 'inline-code':['`','`','code'], 'code-block':['```\n','\n```','code here\n'] }[action];
+    if (!wrap) return;
+    const body = selected || wrap[2]; field.setRangeText(`${wrap[0]}${body}${wrap[1]}`, start, end, 'select');
+    if (!selected) field.setSelectionRange(start + wrap[0].length, start + wrap[0].length + body.length);
+  }
+  field.dispatchEvent(new Event('input', { bubbles:true }));
+});
+function inlineMarkdown(source) {
+  let html = esc(source);
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/__(.+?)__/g, '<strong>$1</strong>');
+  html = html.replace(/\*(?!\s)(.+?)\*/g, '<em>$1</em>').replace(/_(?!\s)(.+?)_/g, '<em>$1</em>');
+  return html;
+}
+function renderMarkdown(source) {
+  const lines = String(source || '').replace(/\r/g, '').split('\n'), out = [];
+  let paragraph = [], list = [], listType = '', code = null;
+  const flushParagraph = () => { if (paragraph.length) { out.push(`<p>${paragraph.map(inlineMarkdown).join('<br>')}</p>`); paragraph = []; } };
+  const flushList = () => { if (list.length) { out.push(`<${listType}>${list.map((item) => `<li>${inlineMarkdown(item)}</li>`).join('')}</${listType}>`); list = []; listType = ''; } };
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      flushParagraph(); flushList();
+      if (code === null) code = []; else { out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`); code = null; }
+      continue;
+    }
+    if (code !== null) { code.push(line); continue; }
+    const bullet = line.match(/^\s*[-*+]\s+(.+)$/), numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (bullet || numbered) { flushParagraph(); const type = bullet ? 'ul' : 'ol'; if (listType && listType !== type) flushList(); listType = type; list.push((bullet || numbered)[1]); continue; }
+    flushList();
+    const heading = line.match(/^(#{1,4})\s+(.+)$/), quote = line.match(/^>\s?(.*)$/);
+    if (heading) { flushParagraph(); const level = heading[1].length; out.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`); }
+    else if (quote) { flushParagraph(); out.push(`<blockquote>${inlineMarkdown(quote[1])}</blockquote>`); }
+    else if (/^\s*([-*_]\s*){3,}$/.test(line)) { flushParagraph(); out.push('<hr>'); }
+    else if (!line.trim()) flushParagraph();
+    else paragraph.push(line);
+  }
+  if (code !== null) out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`);
+  flushParagraph(); flushList();
+  return out.join('');
+}
+function detailSection(title, text, cls = '') { return text ? `<section class="detail-section ${cls}"><h3>${title}</h3><div class="markdown-body">${renderMarkdown(text)}</div></section>` : ''; }
 function clearDetailUrls() { revokeUrls(detailObjectUrls); }
 async function renderDetailImages(images) { const host = $('#detail-images'); if (!host) return; host.replaceChildren(); for (const image of images || []) { try { const record = await getMedia(image.id); if (!record || !$('#detail-images')) continue; const url = URL.createObjectURL(record.blob); detailObjectUrls.push(url); const figure = document.createElement('figure'); figure.className = 'detail-figure'; const img = document.createElement('img'); img.src = url; img.alt = image.caption || image.name || 'Journal illustration'; figure.append(img); if (image.caption) { const caption = document.createElement('figcaption'); caption.textContent = image.caption; figure.append(caption); } host.append(figure); } catch { /* Text remains available when media is missing. */ } } }
 function openDetail(id) {
@@ -150,7 +204,7 @@ $('#entry-form').addEventListener('submit', async (event) => {
   } catch (error) { await Promise.all(savedIds.map(deleteMedia)); showToast(error.message || 'Could not save this page.'); }
   finally { saveButton.disabled = false; }
 });
-$('#detail-content').addEventListener('click', async (event) => { const action = event.target.closest('[data-action]')?.dataset.action; if (action === 'edit') { const page = entries.find((e) => e.id === selectedEntryId); $('#detail-dialog').close(); openForm(page); } if (action === 'delete' && confirm('Delete this page? This cannot be undone.')) { const before = entries; entries = entries.filter((e) => e.id !== selectedEntryId); if (save()) { await deleteUnusedMedia(before, entries); render(); $('#detail-dialog').close(); clearDetailUrls(); showToast('Page removed from your journal.'); } else entries = before; } });
+$('#detail-content').addEventListener('click', async (event) => { if (event.target.closest('.close-dialog')) { $('#detail-dialog').close(); return; } const action = event.target.closest('[data-action]')?.dataset.action; if (action === 'edit') { const page = entries.find((e) => e.id === selectedEntryId); $('#detail-dialog').close(); openForm(page); } if (action === 'delete' && confirm('Delete this page? This cannot be undone.')) { const before = entries; entries = entries.filter((e) => e.id !== selectedEntryId); if (save()) { await deleteUnusedMedia(before, entries); render(); $('#detail-dialog').close(); clearDetailUrls(); showToast('Page removed from your journal.'); } else entries = before; } });
 $('#detail-dialog').addEventListener('close', clearDetailUrls); $('#backup-button').addEventListener('click', () => $('#backup-dialog').showModal());
 $('#export-button').addEventListener('click', async () => { const button = $('#export-button'); button.disabled = true; $('#backup-message').textContent = 'Gathering pages and illustrations…'; try { const backup = await buildBackup(), blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `little-by-little-backup-${todayISO()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); $('#backup-message').textContent = 'Your backup includes journals, pages, and images.'; } catch { $('#backup-message').textContent = 'Could not build backup. Try again in a moment.'; } finally { button.disabled = false; } });
 $('#import-file').addEventListener('change', async (event) => {
