@@ -16,7 +16,7 @@ Then visit `http://localhost:4173`.
 
 - A journal is a subject notebook. Create one for a subject such as Algorithms, Operating Systems, or Databases; rename or delete it from the journal switcher. A library always keeps at least one journal.
 - Each journal contains individual pages. Choose **Concept / Topic** for explanations, when-to-use notes, complexity, examples, and illustrations. Choose **Practice Problem** for question statements, input/output, constraints, code, sticking points, and your own explanation.
-- The editor accepts Markdown as plain text and includes quick formatting controls for headings, emphasis, lists, quotes, and code. Saved page notes render Markdown safely, including fenced code blocks and web links.
+- The editor accepts Markdown as plain text and includes quick formatting controls for headings, emphasis, lists, quotes, and code. Saved page notes render Markdown safely, including fenced code blocks and web links. LaTeX renders in saved notes and compact list previews with `$...$` inline, `$$...$$` for display equations, and `\(...\)` / `\[...\]` delimiters. KaTeX is bundled locally, so math typesetting also works offline. Your saved text stays on this device.
 - Open a page to edit or delete it. Add captions to uploaded illustrations. Images are resized and stored locally in IndexedDB; page text is stored locally in this browser. Neither is sent to a server.
 - The library displays at most 12 pages at a time and adds page navigation as it grows. Search, filters, activity counts, and the random surprise page are scoped to the selected journal.
 - Quotes rotate every 12 seconds while the app is open. The ↻ control advances immediately.

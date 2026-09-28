@@ -67,7 +67,8 @@ function render() {
   $('#active-journal-name').textContent = currentJournal().name; $('#journal-subtitle').textContent = `${currentJournal().name.toUpperCase()} · SUBJECT JOURNAL`;
   $('#journal-list').innerHTML = journals.map((j) => `<div class="journal-item"><button class="journal-option${j.id === activeJournalId ? ' active' : ''}" type="button" data-journal-id="${esc(j.id)}"><span class="journal-option-name">${esc(j.name)}</span><span class="journal-option-count">${entries.filter((e) => e.journalId === j.id).length}</span></button><button class="journal-action" type="button" data-journal-edit="${esc(j.id)}" aria-label="Rename ${esc(j.name)}" title="Rename journal">↗</button><button class="journal-action delete-journal-action" type="button" data-journal-delete="${esc(j.id)}" aria-label="Delete ${esc(j.name)}" title="Delete journal">×</button></div>`).join('');
   $('#entry-count').textContent = `${String(scoped.length).padStart(2, '0')} ${scoped.length === 1 ? 'PAGE' : 'PAGES'}`; $('#stat-total').textContent = scoped.length; $('#stat-week').textContent = weekCount; $('#stat-streak').textContent = streakCount(scoped); renderWeek(scoped);
-  $('#entries').innerHTML = visible.map((e) => { const d = dateLabel(e.date), preview = e.kind === 'topic' ? (e.notes || e.whenToUse || 'A concept worth returning to.') : (e.reflection || e.hard || e.description || 'A question worth keeping.'); const label = e.kind === 'topic' ? 'CONCEPT' : (e.tag || 'PRACTICE PROBLEM'); return `<article class="entry-row" data-id="${esc(e.id)}" tabindex="0" role="button" aria-label="Open ${esc(e.title)}"><time class="entry-date" datetime="${esc(e.date)}"><span class="date-day">${d.day}</span>${d.month} '${String(d.year).slice(-2)}</time><div class="entry-main"><h3 class="entry-title">${esc(e.title)}</h3><p class="entry-preview">${esc(preview)}</p></div><span class="entry-tag">${esc(label)}</span><span class="entry-mark" aria-hidden="true">↗</span></article>`; }).join('');
+  $('#entries').innerHTML = visible.map((e) => { const d = dateLabel(e.date), preview = e.kind === 'topic' ? (e.notes || e.whenToUse || 'A concept worth returning to.') : (e.reflection || e.hard || e.description || 'A question worth keeping.'); const label = e.kind === 'topic' ? 'CONCEPT' : (e.tag || 'PRACTICE PROBLEM'); return `<article class="entry-row" data-id="${esc(e.id)}" tabindex="0" role="button" aria-label="Open ${esc(e.title)}"><time class="entry-date" datetime="${esc(e.date)}"><span class="date-day">${d.day}</span>${d.month} '${String(d.year).slice(-2)}</time><div class="entry-main"><h3 class="entry-title">${esc(e.title)}</h3><div class="entry-preview">${renderPreviewMarkdown(preview)}</div></div><span class="entry-tag">${esc(label)}</span><span class="entry-mark" aria-hidden="true">↗</span></article>`; }).join('');
+  if (window.renderMathInElement) $('#entries').querySelectorAll('.entry-preview').forEach((preview) => window.renderMathInElement(preview, { delimiters:[{ left:'$$', right:'$$', display:true },{ left:'$', right:'$', display:false },{ left:'\\(', right:'\\)', display:false },{ left:'\\[', right:'\\]', display:true }], throwOnError:false, strict:false }));
   $('#empty-state').classList.toggle('hidden', filtered.length > 0); $('#entries').classList.toggle('hidden', filtered.length === 0);
   $('#empty-title').textContent = scoped.length === 0 ? 'A blank page is full of possibility.' : 'Nothing on this page just yet.'; $('#empty-copy').textContent = scoped.length === 0 ? 'Start with one concept you want to understand.' : 'Try another search or filter, or add a new page.';
   $('#entry-pagination').classList.toggle('hidden', filtered.length <= PAGE_SIZE); $('#page-summary').textContent = `PAGE ${currentPage} OF ${totalPages} · ${filtered.length} PAGES`; $('#previous-page').disabled = currentPage === 1; $('#next-page').disabled = currentPage === totalPages;
@@ -119,12 +120,23 @@ $('.markdown-tools').addEventListener('click', (event) => {
   field.dispatchEvent(new Event('input', { bubbles:true }));
 });
 function inlineMarkdown(source) {
-  let html = esc(source);
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  const protectedParts = [];
+  const protect = (value) => `\uE000${protectedParts.push(value) - 1}\uE001`;
+  // Pasted problem statements often put inline formulas directly together,
+  // producing `$...$$...$`. Separate that boundary before KaTeX sees it.
+  const normalized = String(source).replace(/(?<=[A-Za-z0-9}])\$\$(?=[\\A-Za-z0-9])/g, () => '$ $');
+  let html = esc(normalized);
+  html = html.replace(/`([^`]+)`/g, (_, code) => protect(`<code>${code}</code>`));
+  html = html.replace(/\$\$[\s\S]+?\$\$|\$[^$\n]+\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)/g, (math) => protect(math));
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/__(.+?)__/g, '<strong>$1</strong>');
   html = html.replace(/\*(?!\s)(.+?)\*/g, '<em>$1</em>').replace(/_(?!\s)(.+?)_/g, '<em>$1</em>');
-  return html;
+  return html.replace(/\uE000(\d+)\uE001/g, (_, index) => protectedParts[Number(index)]);
+}
+function renderPreviewMarkdown(source) {
+  const flattened = String(source || '').replace(/```[^\n]*\n?/g, '').replace(/```/g, '').split('\n').map((line) => line.replace(/^\s*#{1,4}\s+/, '').replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|>\s?)/, '')).join(' · ').replace(/\s+/g, ' ').trim();
+  const compact = flattened.length > 260 ? `${flattened.slice(0, 257).trimEnd()}…` : flattened;
+  return inlineMarkdown(compact);
 }
 function renderMarkdown(source) {
   const lines = String(source || '').replace(/\r/g, '').split('\n'), out = [];
@@ -159,7 +171,9 @@ function openDetail(id) {
   const e = entries.find((item) => item.id === id); if (!e) return; clearDetailUrls(); selectedEntryId = id; const d = dateLabel(e.date), topic = e.kind === 'topic';
   const body = topic ? `${detailSection('THE IDEA, IN YOUR WORDS', e.notes)}${detailSection('WHEN TO USE IT', e.whenToUse)}${detailSection('COST / COMPLEXITY', e.complexity)}` : `${detailSection('THE QUESTION', e.description)}<div class="detail-grid">${detailSection('INPUT FORMAT', e.input)}${detailSection('OUTPUT FORMAT', e.output)}</div>${detailSection('CONSTRAINTS', e.constraints)}${detailSection('THE TRICKY PART', e.hard)}${detailSection('MY OWN EXPLANATION', e.reflection)}`;
   $('#detail-content').innerHTML = `<div class="detail-wrap"><div class="detail-header"><div><p class="detail-date">${d.month} ${d.day}, ${d.year} · ${topic ? 'CONCEPT NOTE' : 'PRACTICE NOTE'}</p><h2>${esc(e.title)}<span class="period">.</span></h2><span class="detail-tag">${esc(topic ? (e.tag || 'CONCEPT') : (e.tag || 'PRACTICE PROBLEM'))}</span></div><div class="detail-actions"><button class="small-action" data-action="edit">Edit</button><button class="small-action" data-action="delete">Delete</button><button class="icon-button close-dialog" aria-label="Close">×</button></div></div>${body}${e.code ? `<section class="detail-section"><h3>${topic ? 'EXAMPLE / CODE' : 'MY CODE'}</h3><pre>${esc(e.code)}</pre></section>` : ''}<div class="detail-images" id="detail-images"></div></div>`;
-  $('#detail-dialog').showModal(); if (e.images?.length) void renderDetailImages(e.images);
+  $('#detail-dialog').showModal();
+  if (window.renderMathInElement) window.renderMathInElement($('#detail-content'), { delimiters:[{ left:'$$', right:'$$', display:true },{ left:'$', right:'$', display:false },{ left:'\\(', right:'\\)', display:false },{ left:'\\[', right:'\\]', display:true }], throwOnError:false, strict:false });
+  if (e.images?.length) void renderDetailImages(e.images);
 }
 function openJournalForm(journal = null) { const form = $('#journal-form'); form.reset(); form.elements.id.value = journal?.id || ''; form.elements.name.value = journal?.name || ''; $('#journal-dialog-kicker').textContent = journal ? 'EDIT SUBJECT JOURNAL' : 'A NEW SUBJECT NOTEBOOK'; $('#journal-dialog-title').innerHTML = journal ? 'Change its<br /><em>cover name.</em>' : 'Make a little<br /><em>more room.</em>'; $('#journal-dialog-intro').textContent = journal ? 'Give this subject notebook a clearer name.' : 'Group related ideas into one subject journal.'; $('#journal-submit-label').innerHTML = journal ? 'Save journal <span>↗</span>' : 'Create journal <span>↗</span>'; $('#journal-dialog').showModal(); }
 async function compressImage(file) {
@@ -227,4 +241,9 @@ $('#clear-demo').addEventListener('click', async () => { if (!confirm('Remove th
 document.addEventListener('click', (event) => { if (!event.target.closest('.journal-switch-wrap')) { $('#journal-menu').classList.add('hidden'); $('#journal-switch').setAttribute('aria-expanded', 'false'); } });
 document.addEventListener('keydown', (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); $('#search').focus(); } if (event.key === 'Escape') { $$('dialog[open]').forEach((dialog) => dialog.close()); $('#journal-menu').classList.add('hidden'); $('#journal-switch').setAttribute('aria-expanded', 'false'); } });
 for (const dialog of $$('dialog')) dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+// The app script is parser-loaded while KaTeX is deferred in <head>. Run once more
+// after deferred assets finish so previews on the first paint get typeset too.
+window.addEventListener('load', () => {
+  if (window.renderMathInElement) $('#entries').querySelectorAll('.entry-preview').forEach((preview) => window.renderMathInElement(preview, { delimiters:[{ left:'$$', right:'$$', display:true },{ left:'$', right:'$', display:false },{ left:'\\(', right:'\\)', display:false },{ left:'\\[', right:'\\]', display:true }], throwOnError:false, strict:false }));
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});

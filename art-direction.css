@@ -102,4 +102,9 @@ h1{font:500 clamp(67px,8.2vw,104px)/.87 var(--sans);letter-spacing:-.095em;color
 .markdown-body strong{color:#f1f0e9;font-weight:600}
 .markdown-body em{color:#dedcd2}
 .detail-section .markdown-body{margin-top:0}
+.markdown-body .katex{color:inherit;font-size:1.08em}
+.markdown-body .katex-display{max-width:100%;margin:20px 0;padding:14px 8px;overflow-x:auto;overflow-y:hidden;border-top:1px solid #292b35;border-bottom:1px solid #292b35}
+.entry-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;max-height:3.1em;margin:0;font:10px/1.55 var(--sans);color:#999ba5}
+.entry-preview strong{color:#d8dae0;font-weight:600}.entry-preview em{color:#b9bdc7}.entry-preview code{padding:1px 4px;border:1px solid #343641;background:#10121a;color:#d8eaa6;font:9px var(--mono)}
+.entry-preview .katex{font-size:1em;color:inherit}.entry-preview .katex-display{display:inline-block;max-width:100%;margin:0;padding:0;border:0;overflow:hidden;vertical-align:middle}
 @media(max-width:540px){.entry-dialog form{padding:24px 19px 20px}.field textarea:not(.code-input){font-size:11px;min-height:122px}.field textarea[name="notes"],.field textarea[name="description"],.field textarea[name="hard"],.field textarea[name="reflection"]{min-height:205px}.field textarea[name="whenToUse"],.field textarea[name="complexity"]{min-height:140px}.field textarea.code-input{min-height:220px}.markdown-tools{gap:4px;margin-bottom:19px}.markdown-tools button{height:26px;padding:0 6px}.markdown-tools-hint{flex-basis:100%;margin:4px 0 0 1px}}

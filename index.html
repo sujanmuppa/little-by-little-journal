@@ -16,6 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="art-direction.css" />
+  <link rel="stylesheet" href="vendor/katex/katex.min.css" />
+  <script defer src="vendor/katex/katex.min.js"></script>
+  <script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 </head>
 <body>
   <div class="paper-grain" aria-hidden="true"></div>
@@ -110,7 +113,7 @@
         <button type="button" data-md="quote" title="Quote">❝</button>
         <button type="button" data-md="inline-code" title="Inline code">`code`</button>
         <button type="button" data-md="code-block" title="Code block">{ }</button>
-        <span class="markdown-tools-hint">Paste Markdown freely · format the selected text</span>
+        <span class="markdown-tools-hint">Markdown + LaTeX · <code>$…$</code> inline · <code>$$…$$</code> display</span>
       </div>
       <input type="hidden" name="id" />
       <div class="form-grid">
@@ -145,6 +148,6 @@
   <dialog id="journal-dialog" class="journal-create-dialog"><form id="journal-form"><div class="dialog-top"><span class="dialog-kicker" id="journal-dialog-kicker">A NEW SUBJECT NOTEBOOK</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2 id="journal-dialog-title">Make a little<br /><em>more room.</em></h2><p class="dialog-intro" id="journal-dialog-intro">Group related ideas into one subject journal.</p><input type="hidden" name="id" /><label class="field"><span>JOURNAL / SUBJECT NAME</span><input name="name" maxlength="40" required placeholder="e.g. Data structures & algorithms" /></label><div class="dialog-actions"><button class="cancel-button" type="button">Cancel</button><button class="primary-button" id="journal-submit-label" type="submit">Create journal <span>↗</span></button></div></form></dialog>
   <dialog id="backup-dialog" class="backup-dialog"><div class="dialog-top"><span class="dialog-kicker">YOUR JOURNAL, YOURS</span><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><h2>Keep a copy<br /><em>somewhere safe.</em></h2><p>Your entries live on this device. Export a JSON backup to move them or keep a copy. You can also restore a backup here.</p><div class="backup-actions"><button id="export-button" class="primary-button" type="button">Download backup <span>↓</span></button><label class="import-button">Restore from backup <input id="import-file" type="file" accept="application/json,.json" hidden /></label></div><small id="backup-message"></small></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+  <script defer src="app.js"></script>
 </body>
 </html>
