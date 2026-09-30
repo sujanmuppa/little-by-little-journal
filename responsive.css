@@ -1,0 +1,148 @@
+/* Small-screen layout: preserve the artwork, give the writing room, and make
+   the controls comfortable to use with a thumb. */
+@media (max-width: 760px) {
+  .app-shell { padding-inline: clamp(20px, 5vw, 34px); }
+  .topbar { height: auto; min-height: 72px; padding-block: 12px; gap: 10px; }
+  .topbar-right { gap: clamp(8px, 2vw, 14px); }
+  .journal-switch { max-width: min(34vw, 190px); }
+  .hero { min-height: 0; }
+  .library-heading { gap: 18px; }
+  .library-tools { flex-wrap: wrap; }
+  .search-box { min-width: 0; }
+  .entry-dialog, .detail-dialog, .backup-dialog, .journal-create-dialog, .auth-dialog {
+    max-height: calc(100dvh - 24px);
+  }
+  .entry-dialog form, .detail-wrap { padding-top: 26px; }
+}
+
+@media (max-width: 540px) {
+  .app-shell { padding-inline: 19px; }
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding-block: 12px;
+  }
+  .topbar-right {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: 7px;
+    min-width: 0;
+  }
+  .today-label { display: none; }
+  .wordmark { min-width: 0; }
+  .wordmark-name { font-size: 9px; }
+  .journal-switch { min-height: 40px; max-width: 42vw; padding-inline: 9px; }
+  .journal-switch-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .listen-button { min-height: 40px; padding-inline: 7px; font-size: 8px; gap: 7px; }
+  .cloud-account-button { min-height: 40px; max-width: 94px; padding-inline: 9px; font-size: 8px; }
+  .topbar .icon-button { flex: 0 0 40px; width: 40px; height: 40px; }
+
+  .hero { padding: 42px 0 25px; gap: 2px; }
+  .eyebrow { font-size: 8px; letter-spacing: .18em; }
+  h1 { font-size: clamp(58px, 16.5vw, 82px); line-height: .84; }
+  .hero-note { max-width: 250px; margin: 17px 0 16px; font-size: 12px; }
+  .hero .primary-button { min-height: 44px; }
+  .artwork { min-height: clamp(250px, 76vw, 330px); }
+  .artwork-svg { width: min(94%, 360px); }
+  .artwork-caption { bottom: 0; left: 2%; right: 0; gap: 8px; }
+  .artwork-caption .quote-text { max-width: 220px; font-size: 9px; line-height: 1.45; }
+  .artwork-caption .quote-by { font-size: 6px; }
+  .quote-next { min-width: 36px; min-height: 36px; }
+
+  .overview { gap: 14px; padding-block: 15px; }
+  .overview-title { gap: 8px; flex-wrap: wrap; }
+  .section-kicker { font-size: 7px; letter-spacing: .1em; }
+  .stats-row { gap: 7px; }
+  .stat { min-width: 0; }
+  .stat-number { font-size: 22px; }
+  .stat-label { font-size: 9px; white-space: nowrap; }
+  .stat-divider { height: 25px; }
+  .week-strip { align-self: stretch; justify-content: space-between; gap: 4px; }
+  .week-day { gap: 5px; font-size: 7px; }
+
+  .library { padding-top: 43px; }
+  .library-heading { gap: 15px; }
+  .library-heading h2 { font-size: clamp(37px, 10vw, 48px); }
+  .library-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .search-box { grid-column: 1 / -1; width: 100%; height: 44px; }
+  .search-box input { font-size: 13px; }
+  .filter-button, .surprise-button { min-height: 42px; justify-content: center; font-size: 10px; }
+  .filter-tray { flex-wrap: wrap; gap: 7px; margin-top: 15px; }
+  .filter-chip { min-height: 34px; }
+  .entries { margin-top: 23px; }
+  .entry-row {
+    grid-template-columns: 42px minmax(0, 1fr) 30px;
+    grid-template-areas: "date main mark" "date tag mark";
+    gap: 4px 10px;
+    min-height: 104px;
+    padding: 17px 0;
+  }
+  .entry-date { grid-area: date; align-self: start; padding-top: 3px; font-size: 7px; }
+  .entry-date .date-day { font-size: 21px; }
+  .entry-main { grid-area: main; }
+  .entry-title { font-size: 18px; }
+  .entry-preview { font-size: 10px; line-height: 1.5; }
+  .entry-tag { display: inline-flex; grid-area: tag; align-self: start; justify-self: start; padding: 4px 7px; font-size: 7px; }
+  .entry-mark { grid-area: mark; width: 30px; height: 30px; }
+  .collection-foot { gap: 8px; font-size: 6px; letter-spacing: .08em; }
+  footer { gap: 10px; font-size: 7px; }
+  .footer-link { font-size: 8px; }
+
+  .music-drawer { width: calc(100vw - 24px); right: 12px; padding: 16px; }
+  .music-drawer-heading { min-height: 32px; font-size: 8px; }
+  .music-drawer-heading span:nth-child(2) { display: inline; font-size: 7px; }
+  .music-drawer iframe { min-height: 0; }
+  .jukebox-add-form { grid-template-columns: 1fr; gap: 12px; }
+  .jukebox-add-form label span, .jukebox-queue-heading { font-size: 8px; }
+  .jukebox-add-form input { height: 42px; padding-inline: 10px; font-size: 12px; }
+  .jukebox-add-form > button { grid-column: auto; min-height: 42px; font-size: 8px; }
+  .jukebox-controls { min-height: 48px; }
+  .jukebox-controls button { width: 38px; height: 38px; }
+  .jukebox-controls span { font-size: 7px; }
+
+  .entry-dialog, .detail-dialog, .backup-dialog, .journal-create-dialog, .auth-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - 16px);
+    margin: auto;
+    overscroll-behavior: contain;
+  }
+  .entry-dialog form { padding: 20px 17px calc(20px + env(safe-area-inset-bottom)); }
+  .entry-dialog h2, .backup-dialog h2, .journal-create-dialog h2 { font-size: 29px; }
+  .form-grid, .field-group, .concept-meta { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .field input, .field textarea, .field select { font-size: 14px; }
+  .field textarea:not(.code-input) { min-height: 132px; }
+  .field textarea[name="notes"], .field textarea[name="description"], .field textarea[name="hard"], .field textarea[name="reflection"] { min-height: 190px; }
+  .field textarea.code-input { min-height: 210px; font-size: 12px !important; }
+  .markdown-tools { gap: 6px; padding-block: 8px; }
+  .markdown-tools button { min-width: 36px; min-height: 34px; padding-inline: 8px; }
+  .markdown-tools-hint { flex-basis: 100%; margin: 2px 0 0; font-size: 8px; }
+  .dialog-actions { position: sticky; bottom: -1px; z-index: 3; padding: 12px 0 4px; margin-top: 20px; background: #171923; }
+  .dialog-actions button { min-height: 44px; }
+  .detail-wrap { padding: 22px 18px calc(24px + env(safe-area-inset-bottom)); }
+  .detail-header { align-items: flex-start; }
+  .detail-wrap h2 { font-size: clamp(28px, 8vw, 36px); overflow-wrap: anywhere; }
+  .detail-actions { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
+  .small-action { min-height: 40px; }
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .detail-section p { font-size: 13px; }
+  .detail-section pre { max-width: 100%; white-space: pre; overflow-x: auto; }
+}
+
+@media (max-width: 360px) {
+  .app-shell { padding-inline: 15px; }
+  .wordmark-name { display: none; }
+  .journal-switch { max-width: 39vw; }
+  .artwork { min-height: 245px; }
+  .stats-row { gap: 5px; }
+  .stat-label { font-size: 8px; }
+  .collection-foot { letter-spacing: .04em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artwork-svg, .artwork::before, .empty-sun { animation: none !important; }
+}
