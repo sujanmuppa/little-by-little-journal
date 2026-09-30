@@ -3,6 +3,7 @@ const OLD_KEYS = ['little-by-little-journal-v2', 'little-by-little-journal-v1'];
 const DEFAULT_JOURNAL_ID = 'journal-default';
 const PAGE_SIZE = 12;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const JUKEBOX_KEY = 'little-by-little-jukebox-v1';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const todayISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
@@ -32,8 +33,11 @@ if (!journals.length) journals = [{ id: DEFAULT_JOURNAL_ID, name: 'Practice log'
 entries = (entries || []).map((entry) => ({ kind: entry.kind || 'problem', ...entry, journalId: entry.journalId || DEFAULT_JOURNAL_ID, images: Array.isArray(entry.images) ? entry.images : [] }));
 if (!journals.some((j) => j.id === activeJournalId)) activeJournalId = journals[0].id;
 let activeFilter = 'all', selectedEntryId = null, toastTimer, currentPage = 1, quoteIndex = Math.floor(Date.now() / 12000) % 7, quoteTimer;
-let mediaDbPromise, formMedia = [], formMediaToken = 0, formObjectUrls = [], detailObjectUrls = [];
+let mediaDbPromise, formMedia = [], formMediaToken = 0, formObjectUrls = [], detailObjectUrls = [], revealObserver;
 let lastMarkdownField = null;
+const defaultJukeboxQueue = [{ videoId:'2SUwOgmvzK4', title:'The Less I Know The Better' }];
+let jukeboxQueue = (() => { try { const saved = JSON.parse(localStorage.getItem(JUKEBOX_KEY) || 'null'); return Array.isArray(saved) ? saved.filter((song) => /^[\w-]{11}$/.test(song.videoId) && typeof song.title === 'string').slice(0,100) : defaultJukeboxQueue.slice(); } catch { return defaultJukeboxQueue.slice(); } })();
+let jukeboxTrackIndex = 0, youtubePlayer = null, youtubeApiPromise = null;
 let cloudClient = null, cloudUser = null, cloudSaveTimer = null, cloudRetryTimer = null, cloudRetryDelay = 5000, authMode = 'signin';
 const pendingCloudImageDeletes = new Set();
 const quotes = [
@@ -164,14 +168,109 @@ function render() {
   $('#empty-state').classList.toggle('hidden', filtered.length > 0); $('#entries').classList.toggle('hidden', filtered.length === 0);
   $('#empty-title').textContent = scoped.length === 0 ? 'A blank page is full of possibility.' : 'Nothing on this page just yet.'; $('#empty-copy').textContent = scoped.length === 0 ? 'Start with one concept you want to understand.' : 'Try another search or filter, or add a new page.';
   $('#entry-pagination').classList.toggle('hidden', filtered.length <= PAGE_SIZE); $('#page-summary').textContent = `PAGE ${currentPage} OF ${totalPages} · ${filtered.length} PAGES`; $('#previous-page').disabled = currentPage === 1; $('#next-page').disabled = currentPage === totalPages;
-  $('#filter-count').classList.toggle('hidden', activeFilter === 'all'); $('#filter-count').textContent = activeFilter === 'all' ? '' : '1'; $('#clear-demo').classList.toggle('hidden', !entries.some((e) => e.id.startsWith('sample-')));
+  $('#filter-count').classList.toggle('hidden', activeFilter === 'all'); $('#filter-count').textContent = activeFilter === 'all' ? '' : '1'; $('#clear-demo').classList.toggle('hidden', !entries.some((e) => e.id.startsWith('sample-'))); setupEntryReveals();
 }
 function streakCount(source = currentEntries()) { const dates = new Set(source.map((e) => e.date)); let day = todayISO(); if (!dates.has(day)) { day = new Date(new Date(`${day}T12:00:00`).getTime() - 86400000).toISOString().slice(0, 10); if (!dates.has(day)) return 0; } let n = 0; while (dates.has(day)) { n++; day = new Date(new Date(`${day}T12:00:00`).getTime() - 86400000).toISOString().slice(0, 10); } return n; }
 function renderWeek(source = currentEntries()) { const names = ['M','T','W','T','F','S','S'], start = new Date(`${weekStart()}T12:00:00`), dates = new Set(source.map((e) => e.date)); $('#week-strip').innerHTML = names.map((name, i) => { const d = new Date(start); d.setDate(d.getDate() + i); const iso = d.toISOString().slice(0, 10); return `<span class="week-day" title="${iso}"><span>${name}</span><span class="week-dot${dates.has(iso) ? ' active' : ''}"></span></span>`; }).join(''); }
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('visible'), 2400); }
+function saveJukeboxQueue() { try { localStorage.setItem(JUKEBOX_KEY, JSON.stringify(jukeboxQueue)); } catch { showToast('The queue could not be saved in this browser.'); } }
+function renderJukeboxQueue() {
+  const host = $('#jukebox-queue'); host.replaceChildren();
+  const song = jukeboxQueue[jukeboxTrackIndex];
+  $('#jukebox-now-playing').textContent = song?.title || 'An empty room';
+  $('#jukebox-position').textContent = song ? `${String(jukeboxTrackIndex + 1).padStart(2,'0')} / ${String(jukeboxQueue.length).padStart(2,'0')}` : '00 / 00';
+  $('#jukebox-status').textContent = jukeboxQueue.length ? 'A LITTLE MUSIC FOR THE MIND' : 'ADD A SONG TO BEGIN';
+  $('#jukebox-previous').disabled = jukeboxQueue.length < 2; $('#jukebox-next').disabled = jukeboxQueue.length < 2; $('#jukebox-clear').disabled = !jukeboxQueue.length;
+  jukeboxQueue.forEach((item, index) => {
+    const row = document.createElement('li'); row.className = `jukebox-queue-item${index === jukeboxTrackIndex ? ' is-current' : ''}`;
+    const play = document.createElement('button'); play.type = 'button'; play.className = 'jukebox-queue-play'; play.dataset.playIndex = String(index); play.setAttribute('aria-label', `Play ${item.title}`);
+    const number = document.createElement('span'); number.className = 'jukebox-queue-number'; number.textContent = String(index + 1).padStart(2,'0');
+    const title = document.createElement('span'); title.className = 'jukebox-queue-title'; title.textContent = item.title;
+    const symbol = document.createElement('span'); symbol.className = 'jukebox-queue-symbol'; symbol.textContent = index === jukeboxTrackIndex ? '♫' : '↗';
+    play.append(number, title, symbol);
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'jukebox-remove'; remove.dataset.removeIndex = String(index); remove.setAttribute('aria-label', `Remove ${item.title}`); remove.textContent = '×';
+    row.append(play, remove); host.append(row);
+  });
+}
+function youtubeVideoId(value) {
+  try {
+    const url = new URL(value.trim());
+    if (!['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be','www.youtube-nocookie.com','youtube-nocookie.com'].includes(url.hostname)) return '';
+    const id = url.hostname.endsWith('youtu.be') ? url.pathname.split('/').filter(Boolean)[0] : url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/)?.[1];
+    return id && /^[\w-]{11}$/.test(id) ? id : '';
+  } catch { return ''; }
+}
+function loadYouTubeApi() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (youtubeApiPromise) return youtubeApiPromise;
+  youtubeApiPromise = new Promise((resolve, reject) => {
+    const existingCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof existingCallback === 'function') existingCallback(); resolve(window.YT); };
+    const script = document.createElement('script'); script.src = 'https://www.youtube.com/iframe_api'; script.async = true;
+    script.onerror = () => { youtubeApiPromise = null; reject(new Error('YouTube player could not load.')); };
+    document.head.append(script);
+  });
+  return youtubeApiPromise;
+}
+async function prepareYouTubePlayer(autoplay = false) {
+  const song = jukeboxQueue[jukeboxTrackIndex]; if (!song || $('#music-drawer').hidden) return;
+  $('#jukebox-status').textContent = 'TUNING THE ROOM…';
+  try {
+    const api = await loadYouTubeApi();
+    if ($('#music-drawer').hidden) return;
+    if (youtubePlayer) { if (autoplay) youtubePlayer.loadVideoById(song.videoId); return; }
+    youtubePlayer = new api.Player('youtube-player', {
+      width:'100%', height:'210', videoId:song.videoId,
+      playerVars:{ autoplay:0, controls:1, playsinline:1, rel:0, enablejsapi:1, origin:location.origin },
+      events:{
+        onReady:(event) => { $('#jukebox-status').textContent = 'A LITTLE MUSIC FOR THE MIND'; if (autoplay) event.target.playVideo(); },
+        onStateChange:(event) => { $('.jukebox-art').classList.toggle('is-playing', event.data === api.PlayerState.PLAYING); if (event.data === api.PlayerState.ENDED) { if (jukeboxTrackIndex < jukeboxQueue.length - 1) playJukeboxTrack(jukeboxTrackIndex + 1, true); else $('#jukebox-status').textContent = 'SIDE A COMPLETE · ADD MORE MUSIC'; } },
+        onError:() => { $('#jukebox-status').textContent = 'THIS TRACK MAY NOT ALLOW EMBEDDING'; }
+      }
+    });
+  } catch { $('#jukebox-status').textContent = 'PLAYER UNAVAILABLE · OPEN YOUTUBE MUSIC ↗'; }
+}
+function playJukeboxTrack(index, autoplay = true) {
+  if (!jukeboxQueue.length) return;
+  jukeboxTrackIndex = (index + jukeboxQueue.length) % jukeboxQueue.length; renderJukeboxQueue();
+  if (youtubePlayer) youtubePlayer.loadVideoById(jukeboxQueue[jukeboxTrackIndex].videoId);
+  else if (!$('#music-drawer').hidden) void prepareYouTubePlayer(autoplay);
+}
+function stopJukeboxPlayer() { if (youtubePlayer) youtubePlayer.destroy(); youtubePlayer = null; const frame = $('.youtube-player-frame'); frame.replaceChildren(); const host = document.createElement('div'); host.id = 'youtube-player'; frame.append(host); }
 function setQuote(index, animate = true) { const text = $('#quote-text'), apply = () => { text.textContent = quotes[index].text; $('#quote-by').textContent = quotes[index].by; text.classList.remove('is-changing'); }; if (!animate) return apply(); text.classList.add('is-changing'); setTimeout(apply, 180); }
 function rotateQuote() { quoteIndex = (quoteIndex + 1) % quotes.length; setQuote(quoteIndex); }
 function resetQuoteTimer() { clearInterval(quoteTimer); quoteTimer = setInterval(rotateQuote, 12000); }
+function setupArrival() {
+  const screen = $('#arrival-screen'), number = $('#arrival-progress'), fill = $('#arrival-fill'); if (!screen) return;
+  const start = performance.now(), duration = 1050;
+  const step = (now) => { const progress = Math.min(100, Math.round((now - start) / duration * 100)); number.textContent = String(progress).padStart(2, '0'); fill.style.width = `${progress}%`; if (progress < 100) requestAnimationFrame(step); else setTimeout(() => screen.classList.add('is-gone'), 180); };
+  requestAnimationFrame(step);
+  window.setTimeout(() => screen.classList.add('is-gone'), 1900);
+}
+function setupCurrentCanvas() {
+  const canvas = $('#current-canvas'), ctx = canvas?.getContext('2d'); if (!canvas || !ctx) return;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches, pointer = { x:.52, y:.46, active:false }; let width = 0, height = 0, dpr = 1, frame = 0;
+  const motes = Array.from({length:76}, (_, i) => ({ x:((i * 137.5) % 100) / 100, y:((i * 71.7) % 100) / 100, r:.5 + (i % 4) * .33, phase:i * 1.91, speed:.00025 + (i % 5) * .00007 }));
+  function size() { const box = canvas.getBoundingClientRect(); width = box.width; height = box.height; dpr = Math.min(devicePixelRatio || 1, 1.5); canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); draw(performance.now()); }
+  function draw(now) {
+    if (!width || !height) return; ctx.clearRect(0, 0, width, height);
+    const cx = width * (.52 + (pointer.active ? (pointer.x - .5) * .045 : 0)), cy = height * (.48 + (pointer.active ? (pointer.y - .5) * .045 : 0)), radius = Math.min(width, height) * .37;
+    const haze = ctx.createRadialGradient(cx, cy, radius * .06, cx, cy, radius * 1.25); haze.addColorStop(0, '#a7ff2819'); haze.addColorStop(.48, '#8558ff14'); haze.addColorStop(1, '#ff654000'); ctx.fillStyle = haze; ctx.fillRect(0, 0, width, height);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.sin(now * .00011) * .08);
+    for (let ring = 0; ring < 8; ring++) { const r = radius * (.38 + ring * .105), start = now * (.00004 + ring * .000004) + ring * .46; ctx.beginPath(); ctx.ellipse(0, 0, r, r * (.7 + ring * .018), 0, start, start + Math.PI * (1.13 + (ring % 3) * .2)); ctx.strokeStyle = ring % 3 === 0 ? '#d5ff3f35' : ring % 3 === 1 ? '#a58aff28' : '#ff786c24'; ctx.lineWidth = ring === 3 ? 1.2 : .65; ctx.stroke(); }
+    ctx.restore();
+    motes.forEach((m, i) => { const drift = reduced ? 0 : now * m.speed, x = (m.x * width + Math.sin(m.phase + drift) * 13 + width) % width, y = (m.y * height + Math.cos(m.phase * .7 + drift * .8) * 10 + height) % height, d = Math.hypot(x - cx, y - cy), alpha = Math.max(.12, .72 - d / (radius * 2.3)); ctx.beginPath(); ctx.arc(x, y, m.r, 0, Math.PI * 2); ctx.fillStyle = i % 7 === 0 ? `rgba(213,255,63,${alpha})` : i % 3 === 0 ? `rgba(180,153,255,${alpha * .72})` : `rgba(255,245,226,${alpha * .63})`; ctx.fill(); });
+    if (!reduced) frame = requestAnimationFrame(draw);
+  }
+  canvas.addEventListener('pointermove', (event) => { const rect = canvas.getBoundingClientRect(); pointer.x = (event.clientX - rect.left) / rect.width; pointer.y = (event.clientY - rect.top) / rect.height; pointer.active = true; });
+  canvas.addEventListener('pointerleave', () => { pointer.active = false; }); window.addEventListener('resize', size); size(); if (!reduced) frame = requestAnimationFrame(draw);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(frame); else if (!reduced) frame = requestAnimationFrame(draw); });
+}
+function setupEntryReveals() {
+  if (!('IntersectionObserver' in window)) { $$('.entry-row').forEach((row) => row.classList.add('is-visible')); return; }
+  revealObserver ||= new IntersectionObserver((items) => items.forEach((item) => { if (item.isIntersecting) { item.target.classList.add('is-visible'); revealObserver.unobserve(item.target); } }), { threshold:.08, rootMargin:'0px 0px -24px 0px' });
+  $$('.entry-row:not(.is-visible)').forEach((row) => revealObserver.observe(row));
+}
 function revokeUrls(urls) { urls.forEach((url) => URL.revokeObjectURL(url)); urls.length = 0; }
 function renderFormMedia() {
   const host = $('#image-preview-list'); host.replaceChildren();
@@ -278,7 +377,27 @@ function blobToDataUrl(blob) { return new Promise((resolve, reject) => { const r
 async function buildBackup() { const media = [], seen = new Set(); for (const entry of entries) for (const image of entry.images || []) { if (seen.has(image.id)) continue; seen.add(image.id); let record = await getMedia(image.id).catch(() => null); if (!record?.blob && cloudClient && cloudUser) { const { data } = await cloudClient.storage.from('journal-images').createSignedUrl(`${cloudUser.id}/${image.id}`, 3600); if (data?.signedUrl) { const response = await fetch(data.signedUrl); if (response.ok) record = { name:image.name, blob:await response.blob() }; } } if (record?.blob) media.push({ id:image.id, name:record.name || image.name, type:record.blob.type, data:await blobToDataUrl(record.blob) }); } return { version:3, exportedAt:new Date().toISOString(), journals, activeJournalId, entries, media }; }
 async function restoreMedia(items) { for (const item of items || []) { if (!item.id || !item.data) continue; const blob = await (await fetch(item.data)).blob(); await putMedia({ id:item.id, name:item.name || 'Illustration', blob }); } }
 
-$('#today').textContent = new Date().toLocaleDateString('en', { weekday:'short', month:'short', day:'numeric' }).toUpperCase(); $('#year').textContent = new Date().getFullYear(); setQuote(quoteIndex, false); resetQuoteTimer(); render();
+$('#today').textContent = new Date().toLocaleDateString('en', { weekday:'short', month:'short', day:'numeric' }).toUpperCase(); $('#year').textContent = new Date().getFullYear(); setQuote(quoteIndex, false); resetQuoteTimer(); render(); setupArrival(); setupCurrentCanvas(); renderJukeboxQueue();
+$('#listen-button').addEventListener('click', () => { const drawer = $('#music-drawer'), open = drawer.hidden; drawer.hidden = !open; $('#listen-button').setAttribute('aria-expanded', String(open)); if (open) void prepareYouTubePlayer(false); else stopJukeboxPlayer(); });
+$('#music-close').addEventListener('click', () => { $('#music-drawer').hidden = true; stopJukeboxPlayer(); $('#listen-button').setAttribute('aria-expanded', 'false'); });
+$('#jukebox-add-form').addEventListener('submit', (event) => {
+  event.preventDefault(); const title = $('#jukebox-title').value.trim(), videoId = youtubeVideoId($('#jukebox-url').value);
+  if (!videoId) { showToast('Paste a single YouTube Music or YouTube song link.'); return; }
+  if (!title) return; const wasEmpty = jukeboxQueue.length === 0; jukeboxQueue.push({ videoId, title }); saveJukeboxQueue(); renderJukeboxQueue(); event.currentTarget.reset();
+  if (wasEmpty) { jukeboxTrackIndex = 0; renderJukeboxQueue(); if (!$('#music-drawer').hidden) void prepareYouTubePlayer(false); }
+});
+$('#jukebox-queue').addEventListener('click', (event) => {
+  const play = event.target.closest('[data-play-index]'), remove = event.target.closest('[data-remove-index]');
+  if (play) { playJukeboxTrack(Number(play.dataset.playIndex), true); return; }
+  if (!remove) return;
+  const index = Number(remove.dataset.removeIndex), removedCurrent = index === jukeboxTrackIndex; jukeboxQueue.splice(index, 1);
+  if (!jukeboxQueue.length) { jukeboxTrackIndex = 0; stopJukeboxPlayer(); }
+  else { if (index < jukeboxTrackIndex) jukeboxTrackIndex--; else if (jukeboxTrackIndex >= jukeboxQueue.length) jukeboxTrackIndex = jukeboxQueue.length - 1; if (removedCurrent) { stopJukeboxPlayer(); if (!$('#music-drawer').hidden) void prepareYouTubePlayer(false); } }
+  saveJukeboxQueue(); renderJukeboxQueue();
+});
+$('#jukebox-previous').addEventListener('click', () => playJukeboxTrack(jukeboxTrackIndex - 1, true));
+$('#jukebox-next').addEventListener('click', () => playJukeboxTrack(jukeboxTrackIndex + 1, true));
+$('#jukebox-clear').addEventListener('click', () => { jukeboxQueue = []; jukeboxTrackIndex = 0; stopJukeboxPlayer(); saveJukeboxQueue(); renderJukeboxQueue(); });
 $('#cloud-account-button').addEventListener('click', () => {
   if (!cloudConfigured()) { $('#auth-message').textContent = 'Cloud sync needs your Supabase project URL and publishable key in supabase-config.js, plus the database setup SQL.'; }
   else if (cloudUser) { $('#auth-copy').textContent = `Signed in as ${cloudUser.email}. Your pages and illustrations sync to your private Supabase account.`; $('#auth-message').textContent = ''; }
@@ -296,17 +415,9 @@ $('#auth-mode-toggle').addEventListener('click', () => {
 });
 $('#google-signin').addEventListener('click', async () => {
   if (!cloudClient) { $('#auth-message').textContent = 'Cloud sync is not configured for this site yet.'; return; }
-  const button = $('#google-signin');
-  button.disabled = true;
-  $('#auth-message').textContent = 'Opening Google sign-in…';
-  try {
-    const { error } = await cloudClient.auth.signInWithOAuth({ provider: 'google' });
-    if (error) throw error;
-    $('#auth-message').textContent = 'Redirecting to Google…';
-  } catch (error) {
-    $('#auth-message').textContent = error.message || 'Google sign-in could not be started.';
-    button.disabled = false;
-  }
+  const button = $('#google-signin'); button.disabled = true; $('#auth-message').textContent = 'Opening Google sign-in…';
+  try { const { error } = await cloudClient.auth.signInWithOAuth({ provider:'google' }); if (error) throw error; $('#auth-message').textContent = 'Redirecting to Google…'; }
+  catch (error) { $('#auth-message').textContent = error.message || 'Google sign-in could not be started.'; button.disabled = false; }
 });
 $('#auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();

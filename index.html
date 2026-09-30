@@ -16,11 +16,17 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="art-direction.css" />
+  <link rel="stylesheet" href="psychedelic.css" />
   <link rel="stylesheet" href="vendor/katex/katex.min.css" />
   <script defer src="vendor/katex/katex.min.js"></script>
   <script defer src="vendor/katex/contrib/auto-render.min.js"></script>
 </head>
 <body>
+  <div class="arrival-screen" id="arrival-screen" aria-hidden="true">
+    <div class="arrival-name">little<span>.</span>by<span>.</span>little</div>
+    <div class="arrival-baseline"><span>AN IDEA IN MOTION</span><span id="arrival-progress">00</span></div>
+    <div class="arrival-track"><i id="arrival-fill"></i></div>
+  </div>
   <div class="paper-grain" aria-hidden="true"></div>
   <div class="app-shell">
     <header class="topbar">
@@ -31,6 +37,7 @@
           <div class="journal-menu hidden" id="journal-menu"><span class="journal-menu-label">YOUR JOURNALS</span><div id="journal-list"></div><button class="new-journal-button" id="new-journal-button" type="button"><span>＋</span> New journal</button></div>
         </div>
         <span class="today-label"><span class="live-dot"></span><span id="today"></span></span>
+        <button class="listen-button" id="listen-button" type="button" aria-expanded="false" aria-controls="music-drawer"><span class="listen-bars" aria-hidden="true"><i></i><i></i><i></i></span><span>LISTEN</span></button>
         <button class="cloud-account-button" id="cloud-account-button" type="button">Connect</button>
         <button class="icon-button" id="backup-button" type="button" title="Back up or restore journal" aria-label="Back up or restore journal">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/></svg>
@@ -46,7 +53,8 @@
           <p class="hero-note">A journal for the questions that stay with you.</p>
           <button class="primary-button" id="new-entry" type="button"><span class="plus">＋</span> Add a page <span class="button-arrow">↗</span></button>
         </div>
-        <aside class="artwork" aria-label="Abstract artwork: a study in small beginnings">
+        <aside class="artwork" aria-label="An animated psychedelic landscape inspired by drifting currents">
+          <canvas class="current-canvas" id="current-canvas" aria-hidden="true"></canvas>
           <div class="artwork-label"><span>STUDY Nº 001</span><span>IN PROGRESS</span></div>
           <svg class="artwork-svg" viewBox="0 0 520 440" role="img" aria-label="A vivid abstract study in green, violet, coral, and cream">
             <defs>
@@ -67,6 +75,17 @@
           <div class="artwork-caption"><span id="quote-text" class="quote-text" aria-live="polite">“Great things are not done by impulse,<br />but by a series of small things brought together.”</span><span id="quote-by" class="quote-by">VAN GOGH · LETTER 274</span><button class="quote-next" id="quote-next" type="button" aria-label="Show another quote" title="Another note">↻</button></div>
         </aside>
       </section>
+
+      <div class="music-drawer" id="music-drawer" aria-label="Tame Impala listening room" hidden>
+        <div class="music-drawer-heading"><span>THE LISTENING ROOM</span><span>JUKEBOX · SIDE A</span><button id="music-close" type="button" aria-label="Close listening room">×</button></div>
+        <div class="jukebox-art"><div class="jukebox-record" aria-hidden="true"><span></span></div><div class="jukebox-track"><span class="jukebox-kicker">NOW IN THE ROOM</span><strong id="jukebox-now-playing">The Less I Know The Better</strong><span id="jukebox-position">01 / 01</span></div></div>
+        <div class="youtube-player-frame"><div id="youtube-player"></div></div>
+        <div class="jukebox-controls"><button id="jukebox-previous" type="button" aria-label="Previous song">‹</button><span id="jukebox-status">A LITTLE MUSIC FOR THE MIND</span><button id="jukebox-next" type="button" aria-label="Next song">›</button></div>
+        <form id="jukebox-add-form" class="jukebox-add-form"><label><span>SONG TITLE</span><input id="jukebox-title" maxlength="100" required placeholder="Add a song to the room" /></label><label><span>YOUTUBE MUSIC / YOUTUBE LINK</span><input id="jukebox-url" type="url" required placeholder="https://music.youtube.com/watch?v=…" /></label><button type="submit">ADD TO QUEUE <span>＋</span></button></form>
+        <div class="jukebox-queue-heading"><span>THE QUEUE</span><button id="jukebox-clear" type="button">CLEAR QUEUE</button></div>
+        <ol id="jukebox-queue" class="jukebox-queue" aria-label="Song queue"></ol>
+        <a class="music-open-link" href="https://music.youtube.com/channel/UCdI8MAC5HoPJSJ4zrgDDI-Q" target="_blank" rel="noopener noreferrer">OPEN TAME IMPALA IN YOUTUBE MUSIC ↗</a>
+      </div>
 
       <section class="overview" aria-label="Journal overview">
         <div class="overview-title"><span class="section-kicker" id="journal-subtitle">A SUBJECT NOTEBOOK</span><span class="overview-rule"></span><span id="entry-count" class="entry-count">00 PAGES</span></div>
